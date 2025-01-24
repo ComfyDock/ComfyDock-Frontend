@@ -7,6 +7,7 @@ import {
   FormControl,
   FormItem,
 } from "@/components/ui/form";
+import { CONTAINER_COMFYUI_PATH } from "../utils/MountConfigUtils";
 
 interface MountConfigRowProps {
   index: number;
@@ -20,13 +21,13 @@ const MountConfigRow = ({ index, remove, control, onActionChange }: MountConfigR
     <div className="w-full">
       <FormField
         control={control}
-        name={`mountConfig.${index}.directory`}
+        name={`mountConfig.${index}.host_path`}
         render={({ field }) => (
           <FormItem>
             <FormControl>
               <Input
                 {...field}
-                placeholder="Directory name"
+                placeholder="Host Path"
                 onChange={(e) => {
                   field.onChange(e);
                   onActionChange();
@@ -37,10 +38,50 @@ const MountConfigRow = ({ index, remove, control, onActionChange }: MountConfigR
         )}
       />
     </div>
-    <div className="w-40">
+    <div className="min-w-[120px]">
       <FormField
         control={control}
-        name={`mountConfig.${index}.action`}
+        name={`mountConfig.${index}.container_path`}
+        render={({ field }) => (
+          <FormItem>
+            <Select
+              onValueChange={(value) => {
+                field.onChange(value);
+                onActionChange();
+              }}
+              value={field.value}
+            >
+              <FormControl>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select Path" />
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent>
+                <SelectItem value={`${CONTAINER_COMFYUI_PATH}/models`}>Models</SelectItem>
+                <SelectItem value={`${CONTAINER_COMFYUI_PATH}/output`}>Output</SelectItem>
+                <SelectItem value={`${CONTAINER_COMFYUI_PATH}/input`}>Input</SelectItem>
+                <SelectItem value={`${CONTAINER_COMFYUI_PATH}/user`}>User</SelectItem>
+                <SelectItem value={`${CONTAINER_COMFYUI_PATH}/custom_nodes`}>Custom Nodes</SelectItem>
+              </SelectContent>
+            </Select>
+            {/* <FormControl>
+              <Input
+                {...field}
+                placeholder="Container Path"
+                onChange={(e) => {
+                  field.onChange(e);
+                  onActionChange();
+                }}
+              />
+            </FormControl> */}
+          </FormItem>
+        )}
+      />
+    </div>
+    <div className="min-w-[85px]">
+      <FormField
+        control={control}
+        name={`mountConfig.${index}.type`}
         render={({ field }) => (
           <FormItem>
             <Select
