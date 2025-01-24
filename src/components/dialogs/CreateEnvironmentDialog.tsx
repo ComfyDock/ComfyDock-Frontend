@@ -27,6 +27,15 @@ import MountConfigRow from '../form/MountConfigRow'
 import { UserSettings } from '@/types/UserSettings'
 import { Progress } from '../ui/progress'
 import ImagePullDialog from './PullImageDialog'
+import {
+  getDefaultMountConfigsForEnvType,
+  MountAction,
+  EnvironmentTypeEnum,
+  MountActionEnum,
+  EnvironmentTypeDescriptions,
+  EnvironmentType
+} from "@/components/utils/MountConfigUtils"
+import { useWatch } from 'react-hook-form'
 
 const defaultComfyUIPath = import.meta.env.VITE_DEFAULT_COMFYUI_PATH
 
@@ -49,14 +58,16 @@ const formSchema = z.object({
   release: z.string().min(1, { message: "Release is required" }),
   image: z.string().optional(),
   comfyUIPath: z.string().min(1, { message: "ComfyUI path is required" }),
-  environmentType: z.enum(["Default", "Default+", "Basic", "Isolated", "Custom"]),
+  environmentType: z.nativeEnum(EnvironmentTypeEnum),
   copyCustomNodes: z.boolean().default(false),
   command: z.string().optional(),
   port: z.string().optional(),
   runtime: z.enum(["nvidia", "none"]),
   mountConfig: z.array(z.object({
-    directory: z.string(),
-    action: z.enum(["mount", "copy"])
+    container_path: z.string(),
+    host_path: z.string(),
+    type: z.nativeEnum(MountActionEnum),
+    read_only: z.boolean().default(false)
   }))
 })
 
@@ -67,6 +78,8 @@ export interface CreateEnvironmentDialogProps {
   environments: Environment[]
   createEnvironmentHandler: (environment: EnvironmentInput) => Promise<void>
 }
+
+
 
 export default function CreateEnvironmentDialog({ children, userSettings, environments, createEnvironmentHandler }: CreateEnvironmentDialogProps) {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
@@ -79,25 +92,31 @@ export default function CreateEnvironmentDialog({ children, userSettings, enviro
   
   const { toast } = useToast()
 
+  const initialComfyUIPath = userSettings?.comfyui_path || defaultComfyUIPath || ""
+  const defaultEnvType = EnvironmentTypeEnum.Default
+
+  // Form default values as a constant to avoid duplication
+  const defaultValues = {
+    name: "",
+    release: "latest",
+    image: "",
+    comfyUIPath: initialComfyUIPath,
+    environmentType: defaultEnvType,
+    copyCustomNodes: false,
+    command: userSettings?.command || "",
+    port: String(userSettings?.port) || "8188",
+    runtime: String(userSettings?.runtime) as "nvidia" | "none" || "nvidia",
+    mountConfig: getDefaultMountConfigsForEnvType(defaultEnvType, initialComfyUIPath)
+  }
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      name: "",
-      release: "latest",
-      image: "",
-      comfyUIPath: userSettings?.comfyui_path || defaultComfyUIPath || "",
-      environmentType: "Default",
-      copyCustomNodes: false,
-      command: userSettings?.command || "",
-      port: String(userSettings?.port) || "8188",
-      runtime: String(userSettings?.runtime) as "nvidia" | "none" || "nvidia",
-      mountConfig: [
-        { directory: "user", action: "mount" },
-        { directory: "models", action: "mount" },
-        { directory: "output", action: "mount" },
-        { directory: "input", action: "mount" },
-      ]
-    },
+    defaultValues,
+  })
+
+  const comfyUIPath = useWatch({
+    control: form.control,
+    name: "comfyUIPath",
   })
 
   useEffect(() => {
@@ -116,24 +135,8 @@ export default function CreateEnvironmentDialog({ children, userSettings, enviro
   }, [isCreateModalOpen])
 
   useEffect(() => {
-    form.reset({
-      name: "",
-      release: "latest",
-      image: "",
-      comfyUIPath: userSettings?.comfyui_path || defaultComfyUIPath || "",
-      environmentType: "Default",
-      copyCustomNodes: false,
-      command: userSettings?.command || "",
-      port: String(userSettings?.port) || "8188",
-      runtime: String(userSettings?.runtime) as "nvidia" | "none" || "nvidia",
-      mountConfig: [
-        { directory: "user", action: "mount" },
-        { directory: "models", action: "mount" },
-        { directory: "output", action: "mount" },
-        { directory: "input", action: "mount" },
-      ]
-    })
-  }, [userSettings, form])
+    form.reset(defaultValues)
+  }, [userSettings])
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,
@@ -141,7 +144,7 @@ export default function CreateEnvironmentDialog({ children, userSettings, enviro
   })
 
   const resetForm = () => {
-    form.reset()
+    form.reset(defaultValues)
   }
 
   const validateEnvironmentInput = (environment: EnvironmentInput) => {
@@ -163,7 +166,7 @@ export default function CreateEnvironmentDialog({ children, userSettings, enviro
       options: {
         "comfyui_release": release,
         "port": values.port,
-        "mount_config": Object.fromEntries(values.mountConfig.map(({ directory, action }) => [directory, action])),
+        "mount_config": {mounts: values.mountConfig},
         "runtime": values.runtime,
       }
     }
@@ -236,41 +239,21 @@ export default function CreateEnvironmentDialog({ children, userSettings, enviro
     }
   };
 
-  const handleEnvironmentTypeChange = (value: string) => {
-    form.setValue("environmentType", value as "Default" | "Default+" | "Basic" | "Isolated" | "Custom")
-    switch (value) {
-      case "Default":
-        form.setValue("mountConfig", [
-          { directory: "user", action: "mount" },
-          { directory: "models", action: "mount" },
-          { directory: "output", action: "mount" },
-          { directory: "input", action: "mount" },
-        ])
-        break
-      case "Default+":
-        form.setValue("mountConfig", [
-          { directory: "custom_nodes", action: "copy" },
-          { directory: "user", action: "mount" },
-          { directory: "models", action: "mount" },
-          { directory: "output", action: "mount" },
-          { directory: "input", action: "mount" },
-        ])
-        break
-      case "Basic":
-        form.setValue("mountConfig", [
-          { directory: "models", action: "mount" },
-          { directory: "output", action: "mount" },
-          { directory: "input", action: "mount" },
-        ])
-        break
-      case "Isolated":
-        form.setValue("mountConfig", [])
-        break
-    }
-  }
+  const handleEnvironmentTypeChange = (value: EnvironmentTypeEnum) => {
+    form.setValue("environmentType", value)
+
+    // Grab the comfyUI path from the form
+    const comfyUIPath = form.getValues("comfyUIPath")
+
+    // Generate the mount config array
+    const mountConfigs = getDefaultMountConfigsForEnvType(value, comfyUIPath)
+
+    // Update the form state
+    form.setValue("mountConfig", mountConfigs)
+  };
 
   const handleMountConfigChange = () => {
-    form.setValue("environmentType", "Custom")
+    form.setValue("environmentType", EnvironmentTypeEnum.Custom)
   }
 
   const updateComfyUIPath = async (comfyUIPath: string) => {
@@ -331,9 +314,10 @@ export default function CreateEnvironmentDialog({ children, userSettings, enviro
     }
   }
 
+  // console.log(Object.entries(EnvironmentTypeEnum).map(([key, value]) => (value)))
+
   return (
     <>
-
       <CustomAlertDialog
         open={installComfyUIDialog}
         title="Could not find valid ComfyUI installation"
@@ -454,36 +438,16 @@ export default function CreateEnvironmentDialog({ children, userSettings, enviro
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="Default">
-                            <div className="flex flex-col">
-                              <span className="font-medium">Default</span>
-                              <span className="text-xs text-muted-foreground">Mounts workflows, models, output, and input<br /> directories from your local ComfyUI installation.</span>
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="Default+">
-                            <div className="flex flex-col">
-                              <span className="font-medium">Default+</span>
-                              <span className="text-xs text-muted-foreground">Same as default, but also copies and installs custom<br /> nodes from your local ComfyUI installation.</span>
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="Basic">
-                            <div className="flex flex-col">
-                              <span className="font-medium">Basic</span>
-                              <span className="text-xs text-muted-foreground">Same as default, but without mounting workflows.</span>
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="Isolated">
-                            <div className="flex flex-col">
-                              <span className="font-medium">Isolated</span>
-                              <span className="text-xs text-muted-foreground">Creates an isolated environment with no mounts.</span>
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="Custom">
-                            <div className="flex flex-col">
-                              <span className="font-medium">Custom</span>
-                              <span className="text-xs text-muted-foreground">Allows for advanced configuration options</span>
-                            </div>
-                          </SelectItem>
+                          {Object.entries(EnvironmentTypeEnum).map(([value, label]) => (
+                            <SelectItem key={value} value={label}>
+                              <div className="flex flex-col">
+                                <span className="font-medium">{label}</span>
+                                <span className="text-xs text-muted-foreground">
+                                  {EnvironmentTypeDescriptions[label as EnvironmentType]}
+                                </span>
+                              </div>
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       <FormMessage className="col-start-2 col-span-3" />
@@ -539,6 +503,12 @@ export default function CreateEnvironmentDialog({ children, userSettings, enviro
                         <div>
                           <FormLabel>Mount Config</FormLabel>
                           <div className="space-y-2 pt-2 rounded-lg">
+                            {/* Header Row for Column Titles */}
+                            <div className="flex items-center space-x-2 mb-2 pl-1">
+                              <div className="w-full">Host Path</div>
+                              <div className="w-full">Container Path</div>
+                              <div className="w-full">Action</div>
+                            </div>
                             {fields.map((field, index) => (
                               <MountConfigRow
                                 key={field.id}
@@ -554,7 +524,7 @@ export default function CreateEnvironmentDialog({ children, userSettings, enviro
                               size="sm"
                               className="mt-2"
                               onClick={() => {
-                                append({ directory: "", action: "mount" });
+                                append({ type: MountActionEnum.Mount, container_path: "", host_path: "", read_only: false });
                                 handleMountConfigChange();
                               }}
                             >
@@ -586,4 +556,3 @@ export default function CreateEnvironmentDialog({ children, userSettings, enviro
     </>
   );
 }
-

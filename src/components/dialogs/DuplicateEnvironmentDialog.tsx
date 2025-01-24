@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
-import { Environment, EnvironmentInput } from '@/types/Environment'
+import { Environment, EnvironmentInput, MountConfig } from '@/types/Environment'
 import { Switch } from '@/components/ui/switch'
 import { useToast } from "@/hooks/use-toast"
 import {
@@ -22,6 +22,7 @@ import {
 import { Loader2, X } from 'lucide-react'
 import FormFieldComponent from '../form/FormFieldComponent'
 import MountConfigRow from '../form/MountConfigRow'
+import { CombinedEnvironmentType, CombinedEnvironmentTypeEnum, EnvironmentType, EnvironmentTypeDescriptions, EnvironmentTypeEnum, getDefaultMountConfigsForEnvType, MountActionEnum, parseExistingMountConfig } from '../utils/MountConfigUtils'
 
 const defaultComfyUIPath = import.meta.env.VITE_DEFAULT_COMFYUI_PATH
 const SUCCESS_TOAST_DURATION = 2000
@@ -34,10 +35,12 @@ const formSchema = z.object({
   command: z.string().optional(),
   port: z.string().optional(),
   runtime: z.enum(["nvidia", "none"]),
-  environmentType: z.enum(["Auto", "Custom"]),
+  environmentType: z.nativeEnum(CombinedEnvironmentTypeEnum),
   mountConfig: z.array(z.object({
-    directory: z.string(),
-    action: z.enum(["mount", "copy"])
+    container_path: z.string(),
+    host_path: z.string(),
+    type: z.nativeEnum(MountActionEnum),
+    read_only: z.boolean().default(false),
   }))
 })
 
@@ -54,26 +57,33 @@ export default function DuplicateEnvironmentDialog({ environment, environments, 
   const [isLoading, setIsLoading] = useState(false)
   const { toast } = useToast()
 
+  const existingMounts = parseExistingMountConfig(environment.options?.["mount_config"], environment.comfyui_path || "")
+
+  const defaultValues = {
+    name: environment.name + "-copy",
+    release: environment.options?.["comfyui_release"] as string || "latest",
+    image: "",
+    comfyUIPath: environment.comfyui_path || defaultComfyUIPath || "",
+    command: environment.command || "",
+    port: environment.options?.["port"] as string || "8188",
+    runtime: environment.options?.["runtime"] as "nvidia" | "none" || "nvidia",
+    environmentType: CombinedEnvironmentTypeEnum.Auto as CombinedEnvironmentType, // default to Auto
+    mountConfig: existingMounts, // we'll override if user picks a type
+  }
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      name: environment.name + "-copy",
-      release: environment.options?.["comfyui_release"] as string || "latest",
-      image: "",
-      comfyUIPath: environment.comfyui_path || defaultComfyUIPath || "",
-      command: environment.command || "",
-      port: environment.options?.["port"] as string || "8188",
-      runtime: environment.options?.["runtime"] as "nvidia" | "none" || "nvidia",
-      environmentType: "Auto",
-      mountConfig: Object.entries(environment.options?.["mount_config"] || {})
-        .filter(([_, action]) => action === "mount")
-        .map(([directory, action]) => ({ directory, action: action as "mount" })),
-    },
+    defaultValues,
+    mode: "onChange",
   })
+
+  const resetForm = () => {
+    form.reset(defaultValues)
+  }
 
   // Use useEffect to update form values when the environment changes
   useEffect(() => {
-    form.reset();
+    resetForm();
   }, [open]);
 
   const { fields, append, remove } = useFieldArray({
@@ -81,15 +91,33 @@ export default function DuplicateEnvironmentDialog({ environment, environments, 
     name: "mountConfig",
   })
 
-  const resetForm = () => {
-    form.reset()
+  const handleMountConfigChange = () => {
+    form.setValue("environmentType", EnvironmentTypeEnum.Custom)
   }
 
-  const validateEnvironmentInput = (environment: EnvironmentInput) => {
-    const existingEnvironment = environments.find((env) => env.name === environment.name)
-    if (existingEnvironment) {
-      throw new Error("Environment name already taken")
+  // Called when user picks an environmentType from the dropdown
+  const handleEnvironmentTypeChange = (newType: CombinedEnvironmentType) => {
+    // set the environmentType in form state
+    form.setValue("environmentType", newType)
+
+    const comfyUIPath = form.getValues("comfyUIPath")
+
+    if (newType === "Auto") {
+      // Filter out any "copy" mounts from existingMounts
+      const autoFilteredMounts = existingMounts.filter((m) => m.type === "mount")
+      form.setValue("mountConfig", autoFilteredMounts)
+      return
     }
+
+    if (newType === EnvironmentTypeEnum.Custom) {
+      // Use the entire existingMounts as is
+      form.setValue("mountConfig", existingMounts)
+      return
+    }
+
+    // Otherwise it's one of the standard sets: Default, Default+Workflows, ...
+    const standardConfig = getDefaultMountConfigsForEnvType(newType, comfyUIPath)
+    form.setValue("mountConfig", standardConfig)
   }
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
@@ -101,7 +129,7 @@ export default function DuplicateEnvironmentDialog({ environment, environments, 
       options: {
         "comfyui_release": values.release,
         "port": values.port,
-        "mount_config": Object.fromEntries(values.mountConfig.map(({ directory, action }) => [directory, action])),
+        "mount_config": { mounts: values.mountConfig },
         "runtime": values.runtime,
       }
     }
@@ -138,27 +166,6 @@ export default function DuplicateEnvironmentDialog({ environment, environments, 
     }
   }
 
-  const handleEnvironmentTypeChange = (value: string) => {
-    form.setValue("environmentType", value as "Auto" | "Custom");
-    const prev_mount_config = environment.options?.["mount_config"] || {};
-
-    if (value === "Auto") {
-      const filteredMountConfig = Object.entries(prev_mount_config)
-        .filter(([_, action]) => action === "mount")
-        .map(([directory, action]) => ({ directory, action }));
-
-      form.setValue("mountConfig", filteredMountConfig as { directory: string; action: "mount" | "copy" }[]);
-    }
-    else {
-      form.setValue("mountConfig", Object.entries(prev_mount_config)
-        .map(([directory, action]) => ({ directory, action })) as { directory: string; action: "mount" | "copy" }[]);
-    }
-  }
-
-  const handleMountConfigChange = () => {
-    form.setValue("environmentType", "Custom")
-  }
-
   return (
     <Dialog open={open} onOpenChange={isLoading ? undefined : onOpenChange}>
       <DialogContent className='max-h-[80vh] overflow-y-auto dialog-content'>
@@ -190,19 +197,16 @@ export default function DuplicateEnvironmentDialog({ environment, environments, 
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="Auto">
-                          <div className="flex flex-col">
-                            <span className="font-medium">Auto</span>
-                            <span className="text-xs text-muted-foreground">Keeps the same mount configuration as the<br /> original environment, excluding copied directories.</span>
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="Custom">
-                          <div className="flex flex-col">
-                            <span className="font-medium">Custom</span>
-                            <span className="text-xs text-muted-foreground">Allows for advanced configuration options.</span>
-                          </div>
-                        </SelectItem>
-
+                        {Object.entries(CombinedEnvironmentTypeEnum).map(([value, label]) => (
+                          <SelectItem key={value} value={label}>
+                            <div className="flex flex-col">
+                              <span className="font-medium">{label}</span>
+                              <span className="text-xs text-muted-foreground">
+                                {EnvironmentTypeDescriptions[label as EnvironmentType]}
+                              </span>
+                            </div>
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FormMessage className="col-start-2 col-span-3" />
@@ -249,7 +253,7 @@ export default function DuplicateEnvironmentDialog({ environment, environments, 
                             size="sm"
                             className="mt-2"
                             onClick={() => {
-                              append({ directory: "", action: "mount" })
+                              append({ type: MountActionEnum.Mount, container_path: "", host_path: "", read_only: false })
                               handleMountConfigChange()
                             }}
                           >
