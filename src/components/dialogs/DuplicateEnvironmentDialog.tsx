@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useForm, useFieldArray } from 'react-hook-form'
+import { useForm, useFieldArray, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { Button } from "@/components/ui/button"
@@ -22,7 +22,8 @@ import {
 import { Loader2, X } from 'lucide-react'
 import FormFieldComponent from '../form/FormFieldComponent'
 import MountConfigRow from '../form/MountConfigRow'
-import { CombinedEnvironmentType, CombinedEnvironmentTypeEnum, EnvironmentType, EnvironmentTypeDescriptions, EnvironmentTypeEnum, getDefaultMountConfigsForEnvType, MountActionEnum, parseExistingMountConfig } from '../utils/MountConfigUtils'
+import { CombinedEnvironmentType, CombinedEnvironmentTypeEnum, EnvironmentType, EnvironmentTypeDescriptions, EnvironmentTypeEnum, getDefaultMountConfigsForEnvType, joinPaths, MountActionEnum, parseExistingMountConfig } from '../utils/MountConfigUtils'
+import { FormProvider } from 'react-hook-form'
 
 const defaultComfyUIPath = import.meta.env.VITE_DEFAULT_COMFYUI_PATH
 const SUCCESS_TOAST_DURATION = 2000
@@ -41,6 +42,7 @@ const formSchema = z.object({
     host_path: z.string(),
     type: z.nativeEnum(MountActionEnum),
     read_only: z.boolean().default(false),
+    override: z.boolean().default(false),
   }))
 })
 
@@ -67,8 +69,8 @@ export default function DuplicateEnvironmentDialog({ environment, environments, 
     command: environment.command || "",
     port: environment.options?.["port"] as string || "8188",
     runtime: environment.options?.["runtime"] as "nvidia" | "none" || "nvidia",
-    environmentType: CombinedEnvironmentTypeEnum.Auto as CombinedEnvironmentType, // default to Auto
-    mountConfig: existingMounts, // we'll override if user picks a type
+    environmentType: CombinedEnvironmentTypeEnum.Auto as CombinedEnvironmentType,
+    mountConfig: existingMounts,
   }
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -81,41 +83,78 @@ export default function DuplicateEnvironmentDialog({ environment, environments, 
     form.reset(defaultValues)
   }
 
-  // Use useEffect to update form values when the environment changes
   useEffect(() => {
-    resetForm();
-  }, [open]);
+    if (open) {
+      // When dialog opens, re-parse and filter mounts for Auto type
+      const freshMounts = parseExistingMountConfig(environment.options?.["mount_config"], environment.comfyui_path || "")
+      const filteredMounts = freshMounts.filter(m => m.type === "mount")
+      form.reset({
+        ...defaultValues,
+        mountConfig: filteredMounts
+      })
+    }
+  }, [open])
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: "mountConfig",
   })
 
+  const comfyUIPath = useWatch({
+    control: form.control,
+    name: "comfyUIPath",
+  })
+
+  useEffect(() => {
+    const debounceTimer = setTimeout(() => {
+      const currentEnvType = form.getValues("environmentType")
+      
+      if (currentEnvType === CombinedEnvironmentTypeEnum.Auto) {
+        return // Don't modify mounts for Auto type
+      }
+
+      if (currentEnvType === EnvironmentTypeEnum.Custom) {
+        // For custom environments, update non-overridden paths
+        const updatedMountConfig = form.getValues("mountConfig").map(config => {
+          if (!config.override) {
+            const containerDir = config.container_path.split('/').pop() || ''
+            return {
+              ...config,
+              host_path: joinPaths(comfyUIPath, containerDir)
+            }
+          }
+          return config
+        })
+        form.setValue("mountConfig", updatedMountConfig)
+      } else {
+        // For preset environment types, regenerate the default config
+        const newMountConfig = getDefaultMountConfigsForEnvType(currentEnvType as EnvironmentTypeEnum, comfyUIPath)
+        form.setValue("mountConfig", newMountConfig)
+      }
+    }, 300)
+
+    return () => clearTimeout(debounceTimer)
+  }, [comfyUIPath, form, form.getValues("environmentType")])
+
   const handleMountConfigChange = () => {
     form.setValue("environmentType", EnvironmentTypeEnum.Custom)
   }
 
-  // Called when user picks an environmentType from the dropdown
   const handleEnvironmentTypeChange = (newType: CombinedEnvironmentType) => {
-    // set the environmentType in form state
     form.setValue("environmentType", newType)
-
     const comfyUIPath = form.getValues("comfyUIPath")
 
-    if (newType === "Auto") {
-      // Filter out any "copy" mounts from existingMounts
+    if (newType === CombinedEnvironmentTypeEnum.Auto) {
       const autoFilteredMounts = existingMounts.filter((m) => m.type === "mount")
       form.setValue("mountConfig", autoFilteredMounts)
       return
     }
 
     if (newType === EnvironmentTypeEnum.Custom) {
-      // Use the entire existingMounts as is
       form.setValue("mountConfig", existingMounts)
       return
     }
 
-    // Otherwise it's one of the standard sets: Default, Default+Workflows, ...
     const standardConfig = getDefaultMountConfigsForEnvType(newType, comfyUIPath)
     form.setValue("mountConfig", standardConfig)
   }
@@ -123,7 +162,7 @@ export default function DuplicateEnvironmentDialog({ environment, environments, 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     const newEnvironment: EnvironmentInput = {
       name: values.name,
-      image: "", // TODO: Image not needed for duplicate
+      image: "",
       command: values.command,
       comfyui_path: values.comfyUIPath,
       options: {
@@ -135,18 +174,9 @@ export default function DuplicateEnvironmentDialog({ environment, environments, 
     }
 
     try {
-      // validateEnvironmentInput(newEnvironment)
-      console.log(newEnvironment)
-
-      // Start loading state
       setIsLoading(true)
-
-      // Create the environment
       await duplicateEnvironmentHandler(environment.id || "", newEnvironment)
-
-      // Stop loading state
       setIsLoading(false)
-
       onOpenChange(false)
       resetForm()
       toast({
@@ -168,11 +198,11 @@ export default function DuplicateEnvironmentDialog({ environment, environments, 
 
   return (
     <Dialog open={open} onOpenChange={isLoading ? undefined : onOpenChange}>
-      <DialogContent className='max-h-[80vh] overflow-y-auto dialog-content'>
+      <DialogContent className='max-h-[80vh] min-w-[600px] overflow-y-auto dialog-content'>
         <DialogHeader>
           <DialogTitle>Duplicate Environment</DialogTitle>
         </DialogHeader>
-        <Form {...form}>
+        <FormProvider {...form}>
           <div className="relative">
             {isLoading && (
               <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm z-50">
@@ -181,7 +211,15 @@ export default function DuplicateEnvironmentDialog({ environment, environments, 
             )}
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormFieldComponent control={form.control} name="name" label="Name" placeholder="" />
-              <FormFieldComponent control={form.control} name="comfyUIPath" label="Path to ComfyUI" placeholder="/path/to/ComfyUI" />
+              <FormFieldComponent 
+                control={form.control} 
+                name="comfyUIPath" 
+                label="Path to ComfyUI" 
+                placeholder="/path/to/ComfyUI"
+                onChange={(value: string) => {
+                  form.setValue("comfyUIPath", value)
+                }}
+              />
               <FormField
                 control={form.control}
                 name="environmentType"
@@ -244,8 +282,19 @@ export default function DuplicateEnvironmentDialog({ environment, environments, 
                       <div>
                         <FormLabel>Mount Config</FormLabel>
                         <div className="space-y-2 pt-2 rounded-lg">
+                          <div className="flex items-center space-x-2 mb-2">
+                            <div className="w-40">Override</div>
+                            <div className="w-full">Host Path</div>
+                            <div className="w-full">Container Path</div>
+                            <div className="w-full">Action</div>
+                          </div>
                           {fields.map((field, index) => (
-                            <MountConfigRow key={field.id} index={index} remove={remove} control={form.control} onActionChange={handleMountConfigChange} />
+                            <MountConfigRow 
+                              key={field.id} 
+                              index={index} 
+                              remove={remove} 
+                              onActionChange={handleMountConfigChange} 
+                            />
                           ))}
                           <Button
                             type="button"
@@ -253,7 +302,13 @@ export default function DuplicateEnvironmentDialog({ environment, environments, 
                             size="sm"
                             className="mt-2"
                             onClick={() => {
-                              append({ type: MountActionEnum.Mount, container_path: "", host_path: "", read_only: false })
+                              append({ 
+                                type: MountActionEnum.Mount, 
+                                container_path: "", 
+                                host_path: "", 
+                                read_only: false, 
+                                override: false 
+                              })
                               handleMountConfigChange()
                             }}
                           >
@@ -279,9 +334,8 @@ export default function DuplicateEnvironmentDialog({ environment, environments, 
               </div>
             </form>
           </div>
-        </Form>
+        </FormProvider>
       </DialogContent>
     </Dialog>
   )
 }
-

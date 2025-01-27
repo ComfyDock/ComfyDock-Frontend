@@ -33,9 +33,11 @@ import {
   EnvironmentTypeEnum,
   MountActionEnum,
   EnvironmentTypeDescriptions,
-  EnvironmentType
+  EnvironmentType,
+  joinPaths
 } from "@/components/utils/MountConfigUtils"
 import { useWatch } from 'react-hook-form'
+import { FormProvider } from 'react-hook-form';
 
 const defaultComfyUIPath = import.meta.env.VITE_DEFAULT_COMFYUI_PATH
 
@@ -67,7 +69,8 @@ const formSchema = z.object({
     container_path: z.string(),
     host_path: z.string(),
     type: z.nativeEnum(MountActionEnum),
-    read_only: z.boolean().default(false)
+    read_only: z.boolean().default(false),
+    override: z.boolean().default(false)
   }))
 })
 
@@ -118,6 +121,33 @@ export default function CreateEnvironmentDialog({ children, userSettings, enviro
     control: form.control,
     name: "comfyUIPath",
   })
+
+  useEffect(() => {
+    const debounceTimer = setTimeout(() => {
+      const currentEnvType = form.getValues("environmentType");
+      
+      if (currentEnvType === EnvironmentTypeEnum.Custom) {
+        // For custom environments, update non-overridden paths
+        const updatedMountConfig = form.getValues("mountConfig").map(config => {
+          if (!config.override) {
+            const containerDir = config.container_path.split('/').pop() || '';
+            return {
+              ...config,
+              host_path: joinPaths(comfyUIPath, containerDir)
+            };
+          }
+          return config;
+        });
+        form.setValue("mountConfig", updatedMountConfig);
+      } else {
+        // For preset environment types, regenerate the default config
+        const newMountConfig = getDefaultMountConfigsForEnvType(currentEnvType, comfyUIPath);
+        form.setValue("mountConfig", newMountConfig);
+      }
+    }, 300); // 300ms debounce
+  
+    return () => clearTimeout(debounceTimer);
+  }, [comfyUIPath, form, form.getValues("environmentType")]);
 
   useEffect(() => {
     if (isCreateModalOpen) {
@@ -291,11 +321,32 @@ export default function CreateEnvironmentDialog({ children, userSettings, enviro
       // Try updating the comfyUI path with /ComfyUI or \ComfyUI based on the OS
       const updatedComfyUIPath = await updateComfyUIPath(comfyUIPath);
       form.setValue("comfyUIPath", updatedComfyUIPath);
+      // Also update the mount config to use the updated comfyUI path
+      const currentEnvironmentType = form.getValues("environmentType")
+      // const updatedMountConfig = getDefaultMountConfigsForEnvType(currentEnvironmentType, updatedComfyUIPath)
+      const updatedMountConfig = form.getValues("mountConfig").map(config => {
+        if (!config.override) {
+          // Only update non-overridden paths
+          const containerDir = config.container_path.split('/').pop();
+          return {
+            ...config,
+            host_path: joinPaths(updatedComfyUIPath, containerDir || '')
+          };
+        }
+        return config;
+      });
+      console.log(updatedMountConfig)
+      form.setValue("mountConfig", updatedMountConfig)
       const updatedEnvironment: EnvironmentInput = {
         ...pendingEnvironment,
         comfyui_path: updatedComfyUIPath,
         name: pendingEnvironment?.name || "",
         image: pendingEnvironment?.image || "",
+        options: {
+          ...pendingEnvironment?.options,
+          "comfyui_path": updatedComfyUIPath,
+          "mount_config": {mounts: updatedMountConfig},
+        }
       };
       setPendingEnvironment(updatedEnvironment);
       await continueCreateEnvironment(updatedEnvironment);
@@ -353,11 +404,11 @@ export default function CreateEnvironmentDialog({ children, userSettings, enviro
 
       <Dialog open={isCreateModalOpen} onOpenChange={installComfyUIDialog ? undefined : setIsCreateModalOpen}>
         <DialogTrigger asChild>{children}</DialogTrigger>
-        <DialogContent className="max-h-[80vh] overflow-y-auto dialog-content">
+        <DialogContent className="max-h-[80vh] min-w-[600px] overflow-y-auto dialog-content">
           <DialogHeader>
             <DialogTitle>Create New Environment</DialogTitle>
           </DialogHeader>
-          <Form {...form}>
+          <FormProvider {...form}>
             <div className="relative">
               {isLoading && (
                 <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm z-50">
@@ -417,6 +468,9 @@ export default function CreateEnvironmentDialog({ children, userSettings, enviro
                   name="comfyUIPath"
                   label="Path to ComfyUI"
                   placeholder="/path/to/ComfyUI"
+                  onChange={(value: string) => {
+                    form.setValue("comfyUIPath", value);
+                  }}
                 />
                 <FormField
                   control={form.control}
@@ -504,7 +558,8 @@ export default function CreateEnvironmentDialog({ children, userSettings, enviro
                           <FormLabel>Mount Config</FormLabel>
                           <div className="space-y-2 pt-2 rounded-lg">
                             {/* Header Row for Column Titles */}
-                            <div className="flex items-center space-x-2 mb-2 pl-1">
+                            <div className="flex items-center space-x-2 mb-2">
+                              <div className="w-40">Override</div>
                               <div className="w-full">Host Path</div>
                               <div className="w-full">Container Path</div>
                               <div className="w-full">Action</div>
@@ -514,7 +569,6 @@ export default function CreateEnvironmentDialog({ children, userSettings, enviro
                                 key={field.id}
                                 index={index}
                                 remove={remove}
-                                control={form.control}
                                 onActionChange={handleMountConfigChange}
                               />
                             ))}
@@ -524,7 +578,7 @@ export default function CreateEnvironmentDialog({ children, userSettings, enviro
                               size="sm"
                               className="mt-2"
                               onClick={() => {
-                                append({ type: MountActionEnum.Mount, container_path: "", host_path: "", read_only: false });
+                                append({ type: MountActionEnum.Mount, container_path: "", host_path: "", read_only: false, override: false });
                                 handleMountConfigChange();
                               }}
                             >
@@ -550,7 +604,7 @@ export default function CreateEnvironmentDialog({ children, userSettings, enviro
                 </div>
               </form>
             </div>
-          </Form>
+          </FormProvider>
         </DialogContent>
       </Dialog>
     </>
