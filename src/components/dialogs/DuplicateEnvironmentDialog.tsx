@@ -168,7 +168,7 @@ export default function DuplicateEnvironmentDialog({ environment, environments, 
 
   return (
     <Dialog open={open} onOpenChange={isLoading ? undefined : onOpenChange}>
-      <DialogContent className='max-h-[80vh] overflow-y-auto dialog-content'>
+      <DialogContent className='max-h-[80vh] min-w-[600px] overflow-y-auto dialog-content'>
         <DialogHeader>
           <DialogTitle>Duplicate Environment</DialogTitle>
         </DialogHeader>
@@ -244,8 +244,15 @@ export default function DuplicateEnvironmentDialog({ environment, environments, 
                       <div>
                         <FormLabel>Mount Config</FormLabel>
                         <div className="space-y-2 pt-2 rounded-lg">
+                          {/* Header Row for Column Titles */}
+                          <div className="flex items-center space-x-2 mb-2">
+                              <div className="w-40">Override</div>
+                              <div className="w-full">Host Path</div>
+                              <div className="w-full">Container Path</div>
+                              <div className="w-full">Action</div>
+                            </div>
                           {fields.map((field, index) => (
-                            <MountConfigRow key={field.id} index={index} remove={remove} control={form.control} onActionChange={handleMountConfigChange} />
+                            <MountConfigRow key={field.id} index={index} remove={remove} onActionChange={handleMountConfigChange} />
                           ))}
                           <Button
                             type="button"

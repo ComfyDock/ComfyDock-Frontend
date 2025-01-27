@@ -63,6 +63,7 @@ interface MountConfig {
   host_path: string
   type: MountAction
   read_only: boolean
+  override: boolean
 }
 
 /**
@@ -83,6 +84,7 @@ export function createMountConfig(
     host_path: joinPaths(comfyUIPath, containerDir),
     type: action,
     read_only: false,
+    override: false
   }
 }
 
@@ -116,11 +118,16 @@ export function parseExistingMountConfig(
         host_path: joinPaths(comfyUIPath, key),
         type: val === "mount" ? MountActionEnum.Mount : MountActionEnum.Copy,
         read_only: false,
+        override: false
       });
     }
   }
 
-  return results;
+  // Add override field to existing configs
+  return results.map(config => ({
+    ...config,
+    override: config.override || false // Default to false if missing
+  }));
 }
 
 /**
