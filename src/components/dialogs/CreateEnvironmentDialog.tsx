@@ -13,7 +13,7 @@ import { useEnvironmentCreation, useFormDefaults } from "@/hooks/environment-hoo
 
 interface CreateEnvironmentDialogProps {
   children: React.ReactNode;
-  userSettings: UserSettings;
+  userSettings?: UserSettings;
   createEnvironmentHandler: (environment: EnvironmentInput) => Promise<void>;
 }
 
@@ -39,7 +39,8 @@ export default function CreateEnvironmentDialog({
     setPullImageDialog,
     handleSubmit,
     handleInstallComfyUI,
-    handleInstallFinished
+    handleInstallFinished,
+    handleEnvironmentTypeChange
   } = useEnvironmentCreation(formDefaults, releaseOptions, createEnvironmentHandler, toast);
 
   useEffect(() => {
@@ -82,6 +83,9 @@ export default function CreateEnvironmentDialog({
             onSubmit={handleSubmit}
             isLoading={isLoading}
             submitButtonText="Create"
+            environmentTypeOptions={EnvironmentTypeEnum}
+            environmentTypeDescriptions={EnvironmentTypeDescriptions}
+            handleEnvironmentTypeChange={handleEnvironmentTypeChange}
           >
             <SelectFormField
               name="release"

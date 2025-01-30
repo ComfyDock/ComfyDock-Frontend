@@ -27,11 +27,15 @@ import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/comp
 import { useEffect } from "react";
 import { getDefaultMountConfigsForEnvType } from "../utils/MountConfigUtils";
 import { joinPaths } from "../utils/PathUtils";
+import { CombinedEnvironmentType } from '@/types/Environment'  
 
 
 interface EnvironmentFormProps {
   form: UseFormReturn<EnvironmentFormValues>;
+  environmentTypeOptions: Record<string, string>;
+  environmentTypeDescriptions: typeof EnvironmentTypeDescriptions;
   onSubmit: (values: EnvironmentFormValues) => Promise<void>;
+  handleEnvironmentTypeChange: (newType: CombinedEnvironmentType) => void;
   isLoading: boolean;
   submitButtonText?: string;
   children?: React.ReactNode;
@@ -39,7 +43,10 @@ interface EnvironmentFormProps {
 
 export function EnvironmentForm({
   form,
+  environmentTypeOptions,
+  environmentTypeDescriptions,
   onSubmit,
+  handleEnvironmentTypeChange,
   isLoading,
   submitButtonText = "Create",
   children,
@@ -88,18 +95,36 @@ export function EnvironmentForm({
   }, [comfyUIPath, form, form.getValues("environmentType")]);
 
   // Helper functions
-  const handleEnvironmentTypeChange = (value: EnvironmentTypeEnum) => {
-    form.setValue("environmentType", value)
+  // const handleEnvironmentTypeChange = (value: EnvironmentTypeEnum) => {
+  //   form.setValue("environmentType", value)
 
-    // Grab the comfyUI path from the form
-    const comfyUIPath = form.getValues("comfyUIPath")
+  //   // Grab the comfyUI path from the form
+  //   const comfyUIPath = form.getValues("comfyUIPath")
 
-    // Generate the mount config array
-    const mountConfigs = getDefaultMountConfigsForEnvType(value, comfyUIPath)
+  //   // Generate the mount config array
+  //   const mountConfigs = getDefaultMountConfigsForEnvType(value, comfyUIPath)
 
-    // Update the form state
-    form.setValue("mountConfig", mountConfigs as MountConfigFormValues[])
-  };
+  //   // Update the form state
+  //   form.setValue("mountConfig", mountConfigs as MountConfigFormValues[])
+  // };
+  // const handleEnvironmentTypeChange = (newType: CombinedEnvironmentType) => {
+  //   form.setValue("environmentType", newType)
+  //   const comfyUIPath = form.getValues("comfyUIPath")
+
+  //   if (newType === CombinedEnvironmentTypeEnum.Auto) {
+  //     const autoFilteredMounts = existingMounts.filter((m) => m.type === "mount")
+  //     form.setValue("mountConfig", autoFilteredMounts)
+  //     return
+  //   }
+
+  //   if (newType === EnvironmentTypeEnum.Custom) {
+  //     form.setValue("mountConfig", existingMounts)
+  //     return
+  //   }
+
+  //   const standardConfig = getDefaultMountConfigsForEnvType(newType, comfyUIPath)
+  //   form.setValue("mountConfig", standardConfig)
+  // }
 
   // const handleMountConfigChange = () => {
   //   form.setValue("environmentType", EnvironmentTypeEnum.Custom)
@@ -147,14 +172,14 @@ export function EnvironmentForm({
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {Object.entries(EnvironmentTypeEnum).map(
+                    {Object.entries(environmentTypeOptions).map(
                       ([value, label]) => (
                         <SelectItem key={value} value={label}>
                           <div className="flex flex-col">
                             <span className="font-medium">{label}</span>
                             <span className="text-xs text-muted-foreground">
                               {
-                                EnvironmentTypeDescriptions[
+                                environmentTypeDescriptions[
                                   label as EnvironmentType
                                 ]
                               }

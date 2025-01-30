@@ -325,8 +325,7 @@ export function EnvironmentManagerComponent() {
       <div className="flex flex-col md:flex-row items-center justify-between mb-4">
         <div className="flex flex-wrap justify-center md:justify-start gap-4 mb-4 md:mb-0">
           <CreateEnvironmentDialog
-            userSettings={userSettings}
-            environments={environments}
+            userSettings={userSettings || undefined}
             createEnvironmentHandler={createEnvironmentHandler}
           >
             <Button className="bg-blue-600 hover:bg-blue-700">

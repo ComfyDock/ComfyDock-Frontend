@@ -146,13 +146,12 @@ export default function EnvironmentCard({
               </Button>
             </ToolTip>
 
-            {/* <DuplicateEnvironmentDialog
+            <DuplicateEnvironmentDialog
               environment={environment}
-              environments={environments}
               duplicateEnvironmentHandler={duplicateEnvironmentHandler}
               open={duplicateEnvironmentDialogOpen}
               onOpenChange={setDuplicateEnvironmentDialogOpen}
-            /> */}
+            />
             <ToolTip content="Duplicate">
               <Button variant="ghost" size="icon" onClick={() => setDuplicateEnvironmentDialogOpen(true)}>
                 <Copy className="w-4 h-4" />
