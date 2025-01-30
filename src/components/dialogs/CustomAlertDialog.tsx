@@ -45,7 +45,7 @@ export function CustomAlertDialog({ title, description, cancelText, actionText, 
         <AlertDialogFooter>
           <AlertDialogCancel disabled={loading} onClick={onCancel}>{cancelText}</AlertDialogCancel>
           <AlertDialogAction onClick={onAction} variant={variant} disabled={loading}>{loading ? (<><Loader2 className="h-4 w-4 animate-spin" /> loading...</>) : actionText}</AlertDialogAction>
-          {onAlternateAction && <AlertDialogAction onClick={onAlternateAction}>{loading ? (<><Loader2 className="h-4 w-4 animate-spin" /> loading...</>) : alternateActionText}</AlertDialogAction>}
+          {onAlternateAction && <AlertDialogAction onClick={onAlternateAction} disabled={loading}>{alternateActionText}</AlertDialogAction>}
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

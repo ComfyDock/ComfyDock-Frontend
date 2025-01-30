@@ -17,7 +17,7 @@ import {
 import { ChevronDown, Plus, Settings } from "lucide-react";
 import { Folder, FolderInput } from "@/types/UserSettings";
 import { CreateFolderDialog } from "./dialogs/CreateFolderDialog";
-import { IconComponent } from "./utils/IconComponent";
+import { IconComponent } from "./atoms/IconComponent";
 import { truncateText } from "@/utils/stringUtils";
 import { FolderEditDialog } from "./dialogs/FolderEditDialog";
 

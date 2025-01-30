@@ -5,7 +5,7 @@ import {
   MountAction,
   MountActionEnum,
 } from "@/types/Environment";
-import { joinPaths } from "./PathUtils";
+import { joinPaths } from "@/components/utils/PathUtils";
 
 export const CONTAINER_COMFYUI_PATH = "/app/ComfyUI";
 

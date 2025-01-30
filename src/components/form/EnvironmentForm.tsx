@@ -1,6 +1,6 @@
-import { useForm, FormProvider, useFieldArray } from "react-hook-form";
+import { useForm, FormProvider, useFieldArray, useWatch, UseFormReturn } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { baseFormSchema, EnvironmentFormValues } from "@/types/Environment";
+import { baseFormSchema, EnvironmentFormValues, EnvironmentType, MountConfigFormValues } from "@/types/Environment";
 import {
   EnvironmentTypeDescriptions,
   EnvironmentTypeEnum,
@@ -23,11 +23,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { FormField, FormLabel } from "@/components/ui/form";
+import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { useEffect } from "react";
+import { getDefaultMountConfigsForEnvType } from "../utils/MountConfigUtils";
+import { joinPaths } from "../utils/PathUtils";
 
 
 interface EnvironmentFormProps {
   defaultValues: Partial<EnvironmentFormValues>;
+  form: UseFormReturn<EnvironmentFormValues>;
   environmentTypeOptions: Record<string, string>;
   environmentTypeDescriptions: typeof EnvironmentTypeDescriptions;
   onSubmit: (values: EnvironmentFormValues) => Promise<void>;
@@ -40,6 +44,7 @@ interface EnvironmentFormProps {
 
 export function EnvironmentForm({
   defaultValues,
+  form,
   environmentTypeOptions,
   environmentTypeDescriptions,
   onSubmit,
@@ -49,12 +54,7 @@ export function EnvironmentForm({
   submitButtonText = "Create",
   children,
 }: EnvironmentFormProps) {
-  const form = useForm<EnvironmentFormValues>({
-    resolver: zodResolver(baseFormSchema),
-    defaultValues,
-    mode: "onChange",
-  });
-
+  // Form Fields
   const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: "mountConfig",
@@ -63,6 +63,57 @@ export function EnvironmentForm({
   const handleMountConfigChange = () => {
     form.setValue("environmentType", EnvironmentTypeEnum.Custom);
   };
+
+  const comfyUIPath = useWatch({
+    control: form.control,
+    name: "comfyUIPath",
+  })
+
+  // Effects
+  useEffect(() => {
+    const debounceTimer = setTimeout(() => {
+      const currentEnvType = form.getValues("environmentType");
+      
+      if (currentEnvType === EnvironmentTypeEnum.Custom) {
+        // For custom environments, update non-overridden paths
+        const updatedMountConfig = form.getValues("mountConfig").map((config: MountConfigFormValues) => {
+          if (!config.override) {
+            const containerDir = config.container_path.split('/').pop() || '';
+            return {
+              ...config,
+              host_path: joinPaths(comfyUIPath, containerDir)
+            };
+          }
+          return config;
+        });
+        form.setValue("mountConfig", updatedMountConfig);
+      } else {
+        // For preset environment types, regenerate the default config
+        const newMountConfig = getDefaultMountConfigsForEnvType(currentEnvType as EnvironmentTypeEnum, comfyUIPath);
+        form.setValue("mountConfig", newMountConfig as MountConfigFormValues[]);
+      }
+    }, 300); // 300ms debounce
+  
+    return () => clearTimeout(debounceTimer);
+  }, [comfyUIPath, form, form.getValues("environmentType")]);
+
+  // Helper functions
+  const handleEnvironmentTypeChange = (value: EnvironmentTypeEnum) => {
+    form.setValue("environmentType", value)
+
+    // Grab the comfyUI path from the form
+    const comfyUIPath = form.getValues("comfyUIPath")
+
+    // Generate the mount config array
+    const mountConfigs = getDefaultMountConfigsForEnvType(value, comfyUIPath)
+
+    // Update the form state
+    form.setValue("mountConfig", mountConfigs as MountConfigFormValues[])
+  };
+
+  // const handleMountConfigChange = () => {
+  //   form.setValue("environmentType", EnvironmentTypeEnum.Custom)
+  // }
 
   return (
     <FormProvider {...form}>
@@ -79,6 +130,10 @@ export function EnvironmentForm({
 
           {/* Common Form Fields */}
           <FormFieldComponent name="name" label="Name" placeholder="" />
+
+          {/* Custom Children */}
+          {children}
+
           <FormFieldComponent
             name="comfyUIPath"
             label="Path to ComfyUI"
@@ -90,88 +145,121 @@ export function EnvironmentForm({
             control={form.control}
             name="environmentType"
             render={({ field }) => (
-              <Select onValueChange={field.onChange} value={field.value}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select environment type" />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(environmentTypeOptions).map(
-                    ([value, label]) => (
-                      <SelectItem key={value} value={label}>
-                        <div className="flex flex-col">
-                          <span className="font-medium">{label}</span>
-                          <span className="text-xs text-muted-foreground">
-                            {
-                              environmentTypeDescriptions[
-                                label as keyof typeof environmentTypeDescriptions
-                              ]
-                            }
-                          </span>
-                        </div>
-                      </SelectItem>
-                    )
-                  )}
-                </SelectContent>
-              </Select>
+              <FormItem className="grid grid-cols-4 items-center gap-4">
+                <FormLabel className="text-right">Environment Type</FormLabel>
+                <Select
+                  onValueChange={handleEnvironmentTypeChange}
+                  value={field.value}
+                >
+                  <FormControl className="col-span-3">
+                    <SelectTrigger>
+                      <SelectValue>{field.value}</SelectValue>
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {Object.entries(EnvironmentTypeEnum).map(
+                      ([value, label]) => (
+                        <SelectItem key={value} value={label}>
+                          <div className="flex flex-col">
+                            <span className="font-medium">{label}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {
+                                EnvironmentTypeDescriptions[
+                                  label as EnvironmentType
+                                ]
+                              }
+                            </span>
+                          </div>
+                        </SelectItem>
+                      )
+                    )}
+                  </SelectContent>
+                </Select>
+                <FormMessage className="col-start-2 col-span-3" />
+              </FormItem>
             )}
           />
 
-          {/* Custom Children */}
-          {children}
-
           {/* Advanced Options */}
-          <Accordion type="single" collapsible>
+          <Accordion type="single" collapsible className="w-full px-1">
             <AccordionItem value="advanced-options">
-              <AccordionTrigger>Advanced Options</AccordionTrigger>
-              <AccordionContent className="space-y-4">
-                <FormFieldComponent
-                  name="command"
-                  label="Command"
-                  placeholder="Additional command"
-                />
-                <FormFieldComponent
-                  name="port"
-                  label="Port"
-                  placeholder="Port number"
-                  type="number"
-                />
-
-                {/* Mount Config */}
-                <div>
-                  <FormLabel>Mount Config</FormLabel>
-                  <div className="space-y-2 pt-2">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <div className="w-40">Override</div>
-                      <div className="w-full">Host Path</div>
-                      <div className="w-full">Container Path</div>
-                      <div className="w-full">Action</div>
+              <AccordionTrigger className="text-md font-semibold py-2 px-2">
+                Advanced Options
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-4 px-4">
+                  <FormField
+                    control={form.control}
+                    name="runtime"
+                    render={({ field }) => (
+                      <FormItem className="grid grid-cols-4 items-center gap-4">
+                        <FormLabel className="text-right">Runtime</FormLabel>
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                        >
+                          <FormControl className="col-span-3">
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select runtime" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="nvidia">Nvidia</SelectItem>
+                            <SelectItem value="none">None</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage className="col-start-2 col-span-3" />
+                      </FormItem>
+                    )}
+                  />
+                  <FormFieldComponent
+                    name="command"
+                    label="Command"
+                    placeholder="Additional command"
+                  />
+                  <FormFieldComponent
+                    name="port"
+                    label="Port"
+                    placeholder="Port number"
+                    type="number"
+                  />
+                  <div>
+                    <FormLabel>Mount Config</FormLabel>
+                    <div className="space-y-2 pt-2 rounded-lg">
+                      {/* Header Row for Column Titles */}
+                      <div className="flex items-center space-x-2 mb-2">
+                        <div className="w-40">Override</div>
+                        <div className="w-full">Host Path</div>
+                        <div className="w-full">Container Path</div>
+                        <div className="w-full">Action</div>
+                      </div>
+                      {fields.map((field, index) => (
+                        <MountConfigRow
+                          key={field.id}
+                          index={index}
+                          remove={remove}
+                          onActionChange={handleMountConfigChange}
+                        />
+                      ))}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="mt-2"
+                        onClick={() => {
+                          append({
+                            type: MountActionEnum.Mount,
+                            container_path: "",
+                            host_path: "",
+                            read_only: false,
+                            override: false,
+                          });
+                          handleMountConfigChange();
+                        }}
+                      >
+                        Add Directory
+                      </Button>
                     </div>
-                    {fields.map((field, index) => (
-                      <MountConfigRow
-                        key={field.id}
-                        index={index}
-                        remove={remove}
-                        onActionChange={handleMountConfigChange}
-                      />
-                    ))}
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="mt-2"
-                      onClick={() => {
-                        append({
-                          type: MountActionEnum.Mount,
-                          container_path: "",
-                          host_path: "",
-                          read_only: false,
-                          override: false,
-                        });
-                        handleMountConfigChange();
-                      }}
-                    >
-                      Add Directory
-                    </Button>
                   </div>
                 </div>
               </AccordionContent>
@@ -180,9 +268,9 @@ export function EnvironmentForm({
 
           {/* Submit Button */}
           <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={onCancel} type="button">
+            {/* <Button variant="outline" onClick={onCancel} type="button">
               Cancel
-            </Button>
+            </Button> */}
             <Button type="submit" disabled={isLoading}>
               {isLoading ? (
                 <>

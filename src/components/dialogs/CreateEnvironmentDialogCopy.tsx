@@ -39,23 +39,17 @@ import {
 import { useWatch } from 'react-hook-form'
 import { FormProvider } from 'react-hook-form';
 
-const defaultComfyUIPath = import.meta.env.VITE_DEFAULT_COMFYUI_PATH
+export const defaultComfyUIPath = import.meta.env.VITE_DEFAULT_COMFYUI_PATH
 
-const COMFYUI_IMAGE_NAME = "akatzai/comfyui-env"
+export const COMFYUI_IMAGE_NAME = "akatzai/comfyui-env"
 export const SUCCESS_TOAST_DURATION = 2000
 
 // Get the inverse mapping of dockerImageToReleaseMap
 // const comfyUIReleasesFromImageMap = Object.fromEntries(Object.entries(dockerImageToReleaseMap).map(([release, image]) => [image, release]))
 
-const getLatestComfyUIReleaseFromBranch = (branch: string, releases: string[]) => {
-  if (branch === "latest") {
-    const filteredReleases = releases.filter(release => release !== "latest");
-    return filteredReleases[0] || "latest"; // fallback to latest if none found
-  }
-  return branch;
-}
 
-const formSchema = z.object({
+
+export const formSchema = z.object({
   name: z.string().min(1, { message: "Environment name is required" }).max(128, { message: "Environment name must be less than 128 characters" }),
   release: z.string().min(1, { message: "Release is required" }),
   image: z.string().optional(),

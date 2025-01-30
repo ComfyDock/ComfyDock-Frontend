@@ -1,27 +1,21 @@
 import { useState } from 'react';
 import { UseFormReturn } from 'react-hook-form';
-import { EnvironmentInput, Mount } from '@/types/Environment';
+import { EnvironmentInput, Mount, MountConfigFormValues } from '@/types/Environment';
 import { checkValidComfyUIPath, tryInstallComfyUI } from '@/api/environmentApi';
 import { getDefaultMountConfigsForEnvType } from '@/components/utils/MountConfigUtils';
 import { useToast } from '@/hooks/use-toast';
 import { joinPaths, updateComfyUIPath } from '@/components/utils/PathUtils';
+import { getLatestComfyUIReleaseFromBranch } from '@/components/utils/ComfyUtils';
+
 
 export const useComfyUIInstall = (
   form: UseFormReturn<any>,
   releaseOptions: string[],
-  toast: ReturnType<typeof useToast>['toast']
+  toast: ReturnType<typeof useToast>['toast'],
+  handleInstallFinished?: (updatedComfyUIPath: string, updatedMountConfig: MountConfigFormValues[]) => void,
 ) => {
   const [installComfyUIDialog, setInstallComfyUIDialog] = useState(false);
   const [isInstalling, setIsInstalling] = useState(false);
-
-
-  const getLatestComfyUIReleaseFromBranch = (branch: string, releases: string[]) => {
-    if (branch === "latest") {
-      const filteredReleases = releases.filter(release => release !== "latest");
-      return filteredReleases[0] || "latest"; // fallback to latest if none found
-    }
-    return branch;
-  }
 
   const handleInstallComfyUI = async () => {
     try {
@@ -34,8 +28,9 @@ export const useComfyUIInstall = (
       const updatedPath = updateComfyUIPath(comfyUIPath);
       form.setValue("comfyUIPath", updatedPath);
 
-      updateMountConfigs(updatedPath);
+      const finalMounts = updateMountConfigs(updatedPath);
       setInstallComfyUIDialog(false);
+      handleInstallFinished?.(updatedPath, finalMounts);
       toast({ title: "Success", description: "ComfyUI installed successfully" });
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -54,8 +49,10 @@ export const useComfyUIInstall = (
       return config;
     });
     
-    form.setValue("mountConfig", currentType === 'Custom' ? updatedMounts : 
-      getDefaultMountConfigsForEnvType(currentType, comfyUIPath));
+    const finalMounts = currentType === 'Custom' ? updatedMounts : 
+      getDefaultMountConfigsForEnvType(currentType, comfyUIPath);
+    form.setValue("mountConfig", finalMounts);
+    return finalMounts;
   };
 
   return {

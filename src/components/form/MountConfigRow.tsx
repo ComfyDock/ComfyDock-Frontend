@@ -10,8 +10,9 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { X } from "lucide-react";
 import { FormField, FormControl, FormItem } from "@/components/ui/form";
-import { CONTAINER_COMFYUI_PATH, joinPaths } from "../utils/MountConfigUtils";
+import { CONTAINER_COMFYUI_PATH } from "@/components/utils/MountConfigUtils";
 import { useFormContext, useWatch } from "react-hook-form";
+import { joinPaths } from "@/components/utils/PathUtils";
 
 interface MountConfigRowProps {
   index: number;
