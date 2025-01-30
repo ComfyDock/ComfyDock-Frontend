@@ -30,27 +30,17 @@ import { joinPaths } from "../utils/PathUtils";
 
 
 interface EnvironmentFormProps {
-  defaultValues: Partial<EnvironmentFormValues>;
   form: UseFormReturn<EnvironmentFormValues>;
-  environmentTypeOptions: Record<string, string>;
-  environmentTypeDescriptions: typeof EnvironmentTypeDescriptions;
   onSubmit: (values: EnvironmentFormValues) => Promise<void>;
-  onCancel?: () => void;
   isLoading: boolean;
-  title: string;
   submitButtonText?: string;
   children?: React.ReactNode;
 }
 
 export function EnvironmentForm({
-  defaultValues,
   form,
-  environmentTypeOptions,
-  environmentTypeDescriptions,
   onSubmit,
-  onCancel,
   isLoading,
-  title,
   submitButtonText = "Create",
   children,
 }: EnvironmentFormProps) {
@@ -126,7 +116,7 @@ export function EnvironmentForm({
         )}
 
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-          <h2 className="text-lg font-semibold">{title}</h2>
+          {/* <h2 className="text-lg font-semibold">{title}</h2> */}
 
           {/* Common Form Fields */}
           <FormFieldComponent name="name" label="Name" placeholder="" />
