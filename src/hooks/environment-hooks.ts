@@ -6,9 +6,7 @@ import {
   EnvironmentFormValues,
   baseFormSchema,
   EnvironmentTypeEnum,
-  MountConfigFormValues,
-  CombinedEnvironmentTypeEnum,
-  CombinedEnvironmentType,
+  Mount,
   Environment
 } from "@/types/Environment";
 import { UserSettings } from "@/types/UserSettings";
@@ -40,7 +38,7 @@ export const useFormDefaults = (userSettings?: UserSettings) => {
     mountConfig: getDefaultMountConfigsForEnvType(
       EnvironmentTypeEnum.Default,
       userSettings?.comfyui_path || DEFAULT_COMFYUI_PATH || ""
-    ) as MountConfigFormValues[]
+    ) as Mount[]
   }), [userSettings]);
 };
 
@@ -131,11 +129,11 @@ export const useEnvironmentCreation = (
     }
   }, [releaseOptions, createEnvironment, setInstallComfyUIDialog, toast]);
 
-  const handleEnvironmentTypeChange = (newType: CombinedEnvironmentType) => {
+  const handleEnvironmentTypeChange = (newType: EnvironmentTypeEnum) => {
     form.setValue("environmentType", newType)
     const comfyUIPath = form.getValues("comfyUIPath")
     const standardConfig = getDefaultMountConfigsForEnvType(newType as EnvironmentTypeEnum, comfyUIPath)
-    form.setValue("mountConfig", standardConfig as MountConfigFormValues[])
+    form.setValue("mountConfig", standardConfig as Mount[])
   }
 
   return {
@@ -171,11 +169,11 @@ export const useDuplicateFormDefaults = (
       release: (environment.options?.["comfyui_release"] as string) || "latest",
       image: "",
       comfyUIPath: environment.comfyui_path || userSettings?.comfyui_path || DEFAULT_COMFYUI_PATH || "",
-      environmentType: CombinedEnvironmentTypeEnum.Auto as CombinedEnvironmentType,
+      environmentType: EnvironmentTypeEnum.Auto,
       command: environment.command || userSettings?.command || "",
       port: (environment.options?.["port"] as string) || "8188",
       runtime: (environment.options?.["runtime"] as "nvidia" | "none") || "nvidia",
-      mountConfig: existingMounts as MountConfigFormValues[],
+      mountConfig: existingMounts as Mount[],
     };
   }, [environment, userSettings]);
 };
@@ -184,6 +182,7 @@ export const useEnvironmentDuplication = (
   defaultValues: EnvironmentFormValues,
   environment: Environment,
   duplicateHandler: (id: string, env: EnvironmentInput) => Promise<void>,
+  setIsOpen: (open: boolean) => void,
   toast: ReturnType<typeof useToast>['toast']
 ) => {
   const [isLoading, setIsLoading] = useState(false);
@@ -192,12 +191,16 @@ export const useEnvironmentDuplication = (
     defaultValues,
     mode: "onChange"
   });
+  // console.log(`default values: ${JSON.stringify(defaultValues)}`)
 
   const createEnvironment = useCallback(async (env: EnvironmentInput | null) => {
+    console.log(`createEnvironment called with env: ${JSON.stringify(env)}`)
     if (!env) return;
+    console.log(`creating environment with values: ${JSON.stringify(env)}`)
     
     try {
       await duplicateHandler(environment.id || "", env);
+      setIsOpen(false);
       form.reset(defaultValues);
       toast({
         title: "Success",
@@ -216,6 +219,7 @@ export const useEnvironmentDuplication = (
   }, [duplicateHandler, environment.id, form, defaultValues, toast]);
 
   const handleSubmit = useCallback(async (values: EnvironmentFormValues) => {
+    console.log(`submitting form with values: ${JSON.stringify(values)}`)
     try {
       setIsLoading(true);
       
@@ -243,24 +247,29 @@ export const useEnvironmentDuplication = (
     }
   }, [createEnvironment, environment.image, toast]);
 
-  const handleEnvironmentTypeChange = (newType: CombinedEnvironmentType) => {
+  const handleEnvironmentTypeChange = (newType: EnvironmentTypeEnum) => {
     form.setValue("environmentType", newType)
     const comfyUIPath = form.getValues("comfyUIPath")
     const existingMounts = parseExistingMountConfig(environment.options?.["mount_config"], environment.comfyui_path || "")
 
-    if (newType === CombinedEnvironmentTypeEnum.Auto) {
+    console.log(existingMounts)
+    if (newType === EnvironmentTypeEnum.Auto) {
+      console.log("Auto")
       const autoFilteredMounts = existingMounts.filter((m) => m.type === "mount")
-      form.setValue("mountConfig", autoFilteredMounts as MountConfigFormValues[])
+      console.log(autoFilteredMounts)
+      form.setValue("mountConfig", autoFilteredMounts as Mount[])
       return
     }
 
     if (newType === EnvironmentTypeEnum.Custom) {
-      form.setValue("mountConfig", existingMounts as MountConfigFormValues[])
+      console.log("Custom")
+      form.setValue("mountConfig", existingMounts as Mount[])
       return
     }
 
     const standardConfig = getDefaultMountConfigsForEnvType(newType, comfyUIPath)
-    form.setValue("mountConfig", standardConfig as MountConfigFormValues[])
+    console.log(standardConfig)
+    form.setValue("mountConfig", standardConfig as Mount[])
   }
 
   return {

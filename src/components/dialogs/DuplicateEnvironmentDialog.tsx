@@ -1,17 +1,13 @@
 import { useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { EnvironmentForm } from "@/components/form/EnvironmentForm";
 import { useToast } from "@/hooks/use-toast";
-import { Environment, EnvironmentInput } from "@/types/Environment";
+import { Environment, EnvironmentInput, EnvironmentTypeEnum, EnvironmentTypeDescriptions } from "@/types/Environment";
 import { UserSettings } from "@/types/UserSettings";
-import { SelectFormField } from "../form/SelectFormField";
-import FormFieldComponent from "../form/FormFieldComponent";
 import { 
   useDuplicateFormDefaults,
   useEnvironmentDuplication
 } from "@/hooks/environment-hooks";
-import { CombinedEnvironmentTypeEnum, EnvironmentTypeDescriptions } from "@/types/Environment";
-import { parseExistingMountConfig } from "@/components/utils/MountConfigUtils";
 
 interface DuplicateEnvironmentDialogProps {
   environment: Environment;
@@ -35,13 +31,14 @@ export default function DuplicateEnvironmentDialog({
     form,
     isLoading,
     handleSubmit,
-    createEnvironment,
     handleEnvironmentTypeChange
-  } = useEnvironmentDuplication(formDefaults, environment, duplicateEnvironmentHandler, toast);
+  } = useEnvironmentDuplication(formDefaults, environment, duplicateEnvironmentHandler, onOpenChange, toast);
 
   useEffect(() => {
     if (open) {
+      console.log(`resetting form with defaults: ${JSON.stringify(formDefaults)}`)
       form.reset(formDefaults)
+      console.log(form.getValues())
     }
   }, [open]);
 
@@ -56,7 +53,7 @@ export default function DuplicateEnvironmentDialog({
           onSubmit={handleSubmit}
           isLoading={isLoading}
           submitButtonText="Duplicate"
-          environmentTypeOptions={CombinedEnvironmentTypeEnum}
+          environmentTypeOptions={EnvironmentTypeEnum}
           environmentTypeDescriptions={EnvironmentTypeDescriptions}
           handleEnvironmentTypeChange={handleEnvironmentTypeChange}
         />

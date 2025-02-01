@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { UseFormReturn } from 'react-hook-form';
-import { EnvironmentInput, Mount, MountConfigFormValues } from '@/types/Environment';
+import { EnvironmentInput, Mount } from '@/types/Environment';
 import { checkValidComfyUIPath, tryInstallComfyUI } from '@/api/environmentApi';
 import { getDefaultMountConfigsForEnvType } from '@/components/utils/MountConfigUtils';
 import { useToast } from '@/hooks/use-toast';
@@ -12,7 +12,7 @@ export const useComfyUIInstall = (
   form: UseFormReturn<any>,
   releaseOptions: string[],
   toast: ReturnType<typeof useToast>['toast'],
-  handleInstallFinished?: (updatedComfyUIPath: string, updatedMountConfig: MountConfigFormValues[]) => void,
+  handleInstallFinished?: (updatedComfyUIPath: string, updatedMountConfig: Mount[]) => void,
 ) => {
   const [installComfyUIDialog, setInstallComfyUIDialog] = useState(false);
   const [isInstalling, setIsInstalling] = useState(false);

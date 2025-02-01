@@ -1,6 +1,6 @@
 import { useForm, FormProvider, useFieldArray, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { baseFormSchema, EnvironmentFormValues, EnvironmentInput, EnvironmentType, Mount, MountConfig, MountConfigFormValues } from "@/types/Environment";
+import { baseFormSchema, EnvironmentFormValues, EnvironmentInput, Mount } from "@/types/Environment";
 import {
   EnvironmentTypeDescriptions,
   EnvironmentTypeEnum,
@@ -24,14 +24,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { FormField, FormLabel } from "@/components/ui/form";
-import { Dialog, DialogContent, DialogFooter, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { useEffect, useState } from "react";
-import { CustomAlertDialog } from "./CustomAlertDialog";
 import { useComfyUIInstall } from "@/hooks/use-comfyui-install";
 import { toast } from "@/hooks/use-toast";
 import { getComfyUIImageTags } from "@/api/environmentApi";
-import { getDefaultMountConfigsForEnvType } from "../utils/MountConfigUtils";
-import { joinPaths } from "../utils/PathUtils";
+import { getDefaultMountConfigsForEnvType } from "@/components/utils/MountConfigUtils";
+import { joinPaths } from "@/components/utils/PathUtils";
 import { SUCCESS_TOAST_DURATION } from "./CreateEnvironmentDialogCopy";
 
 
@@ -101,7 +100,7 @@ export function EnvironmentDialog({
       
       if (currentEnvType === EnvironmentTypeEnum.Custom) {
         // For custom environments, update non-overridden paths
-        const updatedMountConfig = form.getValues("mountConfig").map((config: MountConfigFormValues) => {
+        const updatedMountConfig = form.getValues("mountConfig").map((config: Mount) => {
           if (!config.override) {
             const containerDir = config.container_path.split('/').pop() || '';
             return {
@@ -115,7 +114,7 @@ export function EnvironmentDialog({
       } else {
         // For preset environment types, regenerate the default config
         const newMountConfig = getDefaultMountConfigsForEnvType(currentEnvType as EnvironmentTypeEnum, comfyUIPath);
-        form.setValue("mountConfig", newMountConfig as MountConfigFormValues[]);
+        form.setValue("mountConfig", newMountConfig as Mount[]);
       }
     }, 300); // 300ms debounce
   
@@ -124,29 +123,26 @@ export function EnvironmentDialog({
 
   // Hooks
   const {
-    installComfyUIDialog,
-    setInstallComfyUIDialog,
-    isInstalling,
-    handleInstallComfyUI
+    installComfyUIDialog
   } = useComfyUIInstall(form, releaseOptions, toast);
 
   // Helper functions
-  const finishCreateEnvironment = async (environment: EnvironmentInput | null) => {
-    if (!environment) return;
-    // Create environment
-    await createEnvironmentHandler(environment);
-    setIsDialogOpen(false);
-    form.reset();
-    toast({
-      title: "Success",
-      description: "Environment created successfully",
-      duration: SUCCESS_TOAST_DURATION,
-    });
+  // const finishCreateEnvironment = async (environment: EnvironmentInput | null) => {
+  //   if (!environment) return;
+  //   // Create environment
+  //   await createEnvironmentHandler(environment);
+  //   setIsDialogOpen(false);
+  //   form.reset();
+  //   toast({
+  //     title: "Success",
+  //     description: "Environment created successfully",
+  //     duration: SUCCESS_TOAST_DURATION,
+  //   });
 
-    // Cleanup after success
-    setIsLoading(false);
-    setPendingEnvironment(null);
-  }
+  //   // Cleanup after success
+  //   setIsLoading(false);
+  //   setPendingEnvironment(null);
+  // }
 
   return (
     <>
@@ -199,7 +195,7 @@ export function EnvironmentDialog({
                               <div className="flex flex-col">
                                 <span className="font-medium">{label}</span>
                                 <span className="text-xs text-muted-foreground">
-                                  {EnvironmentTypeDescriptions[label as EnvironmentType]}
+                                  {EnvironmentTypeDescriptions[label as EnvironmentTypeEnum]}
                                 </span>
                               </div>
                             </SelectItem>

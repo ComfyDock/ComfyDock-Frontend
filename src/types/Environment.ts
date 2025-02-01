@@ -1,17 +1,28 @@
 // import { EnvironmentTypeEnum, MountActionEnum, CombinedEnvironmentTypeEnum } from "@/components/utils/MountConfigUtils";
 import { z } from "zod";
 
-export type Mount = {
-  container_path: string;
-  host_path: string;
-  type: string;
-  read_only: boolean;
-  override: boolean;
-};
+/**
+ * Type of environment for which we build a mount config
+ */
+export enum EnvironmentTypeEnum {
+  Auto = "Auto",
+  Default = "Default",
+  DefaultPlusWorkflows = "Default+Workflows",
+  DefaultPlusCustomNodes = "Default+CustomNodes",
+  DefaultPlusBoth = "Default+Both",
+  Isolated = "Isolated",
+  Custom = "Custom"
+}
 
-export type MountConfig = {
-  mounts: Mount[];
-};
+export const EnvironmentTypeDescriptions = {
+  [EnvironmentTypeEnum.Auto]: 'Keeps the same mount configuration as the original environment, excluding copied directories.',
+  [EnvironmentTypeEnum.Default]: 'Mounts models, output, and input directories from your local ComfyUI installation.',
+  [EnvironmentTypeEnum.DefaultPlusWorkflows]: 'Same as default, but also mounts workflows from your local ComfyUI installation.',
+  [EnvironmentTypeEnum.DefaultPlusCustomNodes]: 'Same as default, but also copies and installs custom nodes from your local ComfyUI installation.',
+  [EnvironmentTypeEnum.DefaultPlusBoth]: 'Same as default, but also mounts workflows and copies custom nodes from your local ComfyUI installation.',
+  [EnvironmentTypeEnum.Isolated]: 'Creates an isolated environment with no mounts.',
+  [EnvironmentTypeEnum.Custom]: 'Allows for advanced configuration options.',
+}
 
 /**
  * The kind of mount/copy action we're supporting
@@ -21,40 +32,7 @@ export enum MountActionEnum {
   Copy = "copy"
 }
 
-export type MountAction = MountActionEnum
-
-/**
- * Type of environment for which we build a mount config
- */
-export enum EnvironmentTypeEnum {
-  Default = "Default",
-  DefaultPlusWorkflows = "Default+Workflows",
-  DefaultPlusCustomNodes = "Default+CustomNodes",
-  DefaultPlusBoth = "Default+Both",
-  Isolated = "Isolated",
-  Custom = "Custom"
-}
-
-export type EnvironmentType = EnvironmentTypeEnum
-
-// Expand your environment type enum to also have "Auto"
-export const CombinedEnvironmentTypeEnum = {
-  Auto: "Auto",
-  ...EnvironmentTypeEnum,
-} as const
-export type CombinedEnvironmentType = EnvironmentTypeEnum | "Auto"
-
-export const EnvironmentTypeDescriptions = {
-  [CombinedEnvironmentTypeEnum.Auto]: 'Keeps the same mount configuration as the original environment, excluding copied directories.',
-  [EnvironmentTypeEnum.Default]: 'Mounts models, output, and input directories from your local ComfyUI installation.',
-  [EnvironmentTypeEnum.DefaultPlusWorkflows]: 'Same as default, but also mounts workflows from your local ComfyUI installation.',
-  [EnvironmentTypeEnum.DefaultPlusCustomNodes]: 'Same as default, but also copies and installs custom nodes from your local ComfyUI installation.',
-  [EnvironmentTypeEnum.DefaultPlusBoth]: 'Same as default, but also mounts workflows and copies custom nodes from your local ComfyUI installation.',
-  [EnvironmentTypeEnum.Isolated]: 'Creates an isolated environment with no mounts.',
-  [EnvironmentTypeEnum.Custom]: 'Allows for advanced configuration options.',
-}
-
-export const mountConfigSchema = z.object({
+export const mountSchema = z.object({
   container_path: z.string(),
   host_path: z.string(),
   type: z.nativeEnum(MountActionEnum),
@@ -62,7 +40,11 @@ export const mountConfigSchema = z.object({
   override: z.boolean().default(false)
 });
 
-export type MountConfigFormValues = z.infer<typeof mountConfigSchema>;
+export type Mount = z.infer<typeof mountSchema>;
+
+export type MountConfig = {
+  mounts: Mount[];
+};
 
 // Base form schema that can be extended
 export const baseFormSchema = z.object({
@@ -73,8 +55,8 @@ export const baseFormSchema = z.object({
   command: z.string().optional(),
   port: z.string().optional(),
   runtime: z.string().optional(),
-  environmentType: z.nativeEnum(CombinedEnvironmentTypeEnum),
-  mountConfig: z.array(mountConfigSchema)
+  environmentType: z.nativeEnum(EnvironmentTypeEnum),
+  mountConfig: z.array(mountSchema)
 });
 
 export type EnvironmentFormValues = z.infer<typeof baseFormSchema>;
@@ -112,14 +94,3 @@ export type EnvironmentUpdate = {
   options?: Options;
   folderIds?: string[];
 };
-
-
-
-// name: str
-// image: str
-// id: str = ""
-// status: str = ""
-// command: str = ""
-// comfyui_path: str = ""
-// options: dict = {}
-// metadata: dict = {}

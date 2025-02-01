@@ -1,6 +1,5 @@
-import { useForm, FormProvider, useFieldArray, useWatch, UseFormReturn } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { baseFormSchema, EnvironmentFormValues, EnvironmentType, MountConfigFormValues } from "@/types/Environment";
+import { FormProvider, useFieldArray, useWatch, UseFormReturn } from "react-hook-form";
+import { EnvironmentFormValues, Mount } from "@/types/Environment";
 import {
   EnvironmentTypeDescriptions,
   EnvironmentTypeEnum,
@@ -25,17 +24,15 @@ import {
 } from "@/components/ui/select";
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useEffect } from "react";
-import { getDefaultMountConfigsForEnvType } from "../utils/MountConfigUtils";
-import { joinPaths } from "../utils/PathUtils";
-import { CombinedEnvironmentType } from '@/types/Environment'  
-
+import { getDefaultMountConfigsForEnvType } from "@/components/utils/MountConfigUtils";
+import { joinPaths } from "@/components/utils/PathUtils";
 
 interface EnvironmentFormProps {
   form: UseFormReturn<EnvironmentFormValues>;
   environmentTypeOptions: Record<string, string>;
   environmentTypeDescriptions: typeof EnvironmentTypeDescriptions;
   onSubmit: (values: EnvironmentFormValues) => Promise<void>;
-  handleEnvironmentTypeChange: (newType: CombinedEnvironmentType) => void;
+  handleEnvironmentTypeChange: (newType: EnvironmentTypeEnum) => void;
   isLoading: boolean;
   submitButtonText?: string;
   children?: React.ReactNode;
@@ -58,6 +55,7 @@ export function EnvironmentForm({
   });
 
   const handleMountConfigChange = () => {
+    console.log("handleMountConfigChange")
     form.setValue("environmentType", EnvironmentTypeEnum.Custom);
   };
 
@@ -68,12 +66,13 @@ export function EnvironmentForm({
 
   // Effects
   useEffect(() => {
+    console.log("useEffect in EnvironmentForm")
     const debounceTimer = setTimeout(() => {
       const currentEnvType = form.getValues("environmentType");
       
       if (currentEnvType === EnvironmentTypeEnum.Custom) {
         // For custom environments, update non-overridden paths
-        const updatedMountConfig = form.getValues("mountConfig").map((config: MountConfigFormValues) => {
+        const updatedMountConfig = form.getValues("mountConfig").map((config: Mount) => {
           if (!config.override) {
             const containerDir = config.container_path.split('/').pop() || '';
             return {
@@ -83,52 +82,21 @@ export function EnvironmentForm({
           }
           return config;
         });
+        console.log(`updatedMountConfig: ${JSON.stringify(updatedMountConfig)}`)
         form.setValue("mountConfig", updatedMountConfig);
       } else {
         // For preset environment types, regenerate the default config
         const newMountConfig = getDefaultMountConfigsForEnvType(currentEnvType as EnvironmentTypeEnum, comfyUIPath);
-        form.setValue("mountConfig", newMountConfig as MountConfigFormValues[]);
+        if (newMountConfig) {
+          form.setValue("mountConfig", newMountConfig as Mount[]);
+          console.log(`newMountConfig: ${JSON.stringify(newMountConfig)}`)
+        }
       }
     }, 300); // 300ms debounce
   
     return () => clearTimeout(debounceTimer);
-  }, [comfyUIPath, form, form.getValues("environmentType")]);
+  }, [comfyUIPath, form]);
 
-  // Helper functions
-  // const handleEnvironmentTypeChange = (value: EnvironmentTypeEnum) => {
-  //   form.setValue("environmentType", value)
-
-  //   // Grab the comfyUI path from the form
-  //   const comfyUIPath = form.getValues("comfyUIPath")
-
-  //   // Generate the mount config array
-  //   const mountConfigs = getDefaultMountConfigsForEnvType(value, comfyUIPath)
-
-  //   // Update the form state
-  //   form.setValue("mountConfig", mountConfigs as MountConfigFormValues[])
-  // };
-  // const handleEnvironmentTypeChange = (newType: CombinedEnvironmentType) => {
-  //   form.setValue("environmentType", newType)
-  //   const comfyUIPath = form.getValues("comfyUIPath")
-
-  //   if (newType === CombinedEnvironmentTypeEnum.Auto) {
-  //     const autoFilteredMounts = existingMounts.filter((m) => m.type === "mount")
-  //     form.setValue("mountConfig", autoFilteredMounts)
-  //     return
-  //   }
-
-  //   if (newType === EnvironmentTypeEnum.Custom) {
-  //     form.setValue("mountConfig", existingMounts)
-  //     return
-  //   }
-
-  //   const standardConfig = getDefaultMountConfigsForEnvType(newType, comfyUIPath)
-  //   form.setValue("mountConfig", standardConfig)
-  // }
-
-  // const handleMountConfigChange = () => {
-  //   form.setValue("environmentType", EnvironmentTypeEnum.Custom)
-  // }
 
   return (
     <FormProvider {...form}>
@@ -180,7 +148,7 @@ export function EnvironmentForm({
                             <span className="text-xs text-muted-foreground">
                               {
                                 environmentTypeDescriptions[
-                                  label as EnvironmentType
+                                  label as EnvironmentTypeEnum
                                 ]
                               }
                             </span>
@@ -283,9 +251,6 @@ export function EnvironmentForm({
 
           {/* Submit Button */}
           <div className="flex justify-end gap-2">
-            {/* <Button variant="outline" onClick={onCancel} type="button">
-              Cancel
-            </Button> */}
             <Button type="submit" disabled={isLoading}>
               {isLoading ? (
                 <>

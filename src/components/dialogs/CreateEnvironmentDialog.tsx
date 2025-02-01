@@ -1,13 +1,13 @@
 import { useEffect } from "react";
-import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogHeader, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogHeader, DialogTrigger } from "@/components/ui/dialog";
 import { EnvironmentForm } from "@/components/form/EnvironmentForm";
 import { useToast } from "@/hooks/use-toast";
 import { EnvironmentInput, EnvironmentTypeDescriptions, EnvironmentTypeEnum } from "@/types/Environment";
 import { UserSettings } from "@/types/UserSettings";
-import { CustomAlertDialog } from "./CustomAlertDialog";
-import ImagePullDialog from "./PullImageDialog";
-import { SelectFormField } from "../form/SelectFormField";
-import FormFieldComponent from "../form/FormFieldComponent";
+import { CustomAlertDialog } from "@/components/dialogs/CustomAlertDialog";
+import ImagePullDialog from "@/components/dialogs/PullImageDialog";
+import { SelectFormField } from "@/components/form/SelectFormField";
+import FormFieldComponent from "@/components/form/FormFieldComponent";
 import { useComfyUIReleases } from "@/hooks/use-comfyui-releases";
 import { useEnvironmentCreation, useFormDefaults } from "@/hooks/environment-hooks";
 
@@ -49,6 +49,14 @@ export default function CreateEnvironmentDialog({
     }
   }, [formDefaults, isOpen])
 
+  // Filter out the Auto option from the environment type options
+  const filteredEnvironmentTypeOptions: Record<string, string> = Object.values(EnvironmentTypeEnum)
+  .filter((type) => type !== EnvironmentTypeEnum.Auto)
+  .reduce((acc, type) => {
+    acc[type] = type;
+    return acc;
+  }, {} as Record<string, string>);
+
   return (
     <>
       <CustomAlertDialog
@@ -83,7 +91,7 @@ export default function CreateEnvironmentDialog({
             onSubmit={handleSubmit}
             isLoading={isLoading}
             submitButtonText="Create"
-            environmentTypeOptions={EnvironmentTypeEnum}
+            environmentTypeOptions={filteredEnvironmentTypeOptions}
             environmentTypeDescriptions={EnvironmentTypeDescriptions}
             handleEnvironmentTypeChange={handleEnvironmentTypeChange}
           >

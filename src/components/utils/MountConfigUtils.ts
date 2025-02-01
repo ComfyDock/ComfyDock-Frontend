@@ -1,8 +1,6 @@
 import {
   EnvironmentTypeEnum,
-  EnvironmentType,
   Mount,
-  MountAction,
   MountActionEnum,
 } from "@/types/Environment";
 import { joinPaths } from "@/components/utils/PathUtils";
@@ -20,7 +18,7 @@ export const CONTAINER_COMFYUI_PATH = "/app/ComfyUI";
 export function createMountConfig(
   containerDir: string,
   comfyUIPath: string,
-  action: MountAction
+  action: MountActionEnum
 ): Mount {
   return {
     container_path: `${CONTAINER_COMFYUI_PATH}/${containerDir}`,
@@ -80,9 +78,9 @@ export function parseExistingMountConfig(
  * that map to the user’s choice.
  */
 export function getDefaultMountConfigsForEnvType(
-  envType: EnvironmentType,
+  envType: EnvironmentTypeEnum,
   comfyUIPath: string
-): Mount[] {
+): Mount[] | undefined {
   switch (envType) {
     case EnvironmentTypeEnum.Default:
       return [
@@ -113,10 +111,6 @@ export function getDefaultMountConfigsForEnvType(
         createMountConfig("input", comfyUIPath, MountActionEnum.Mount),
       ];
     case EnvironmentTypeEnum.Isolated:
-      return [];
-    case EnvironmentTypeEnum.Custom:
-      // For custom, we typically might not generate anything.
-      // Or if you’d like to have a different default for custom, you can do so here.
       return [];
   }
 }
