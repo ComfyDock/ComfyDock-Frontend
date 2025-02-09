@@ -11,15 +11,19 @@ export type FolderInput = {
 
 export type UserSettings = {
   comfyui_path?: string
-  runtime?: string
   port?: number
+  runtime?: string
   command?: string
   folders?: Folder[]
+  max_deleted_environments?: number
 }
+
 
 export type UserSettingsInput = {
   comfyui_path?: string
   runtime?: string
   port?: number
   command?: string
+  folders?: Folder[]
+  max_deleted_environments?: number
 }

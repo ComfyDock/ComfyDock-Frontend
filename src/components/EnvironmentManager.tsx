@@ -27,7 +27,7 @@ import {
   deleteFolder,
 } from "@/api/environmentApi";
 import UserSettingsDialog from "./dialogs/UserSettingsDialog";
-import { FolderInput, UserSettings } from "@/types/UserSettings";
+import { FolderInput, UserSettings, UserSettingsInput } from "@/types/UserSettings";
 import EnvironmentCard from "./EnvironmentCard";
 import { DEFAULT_FOLDERS, FolderSelector } from "./FolderSelector";
 import { Folder } from "@/types/UserSettings";
@@ -92,7 +92,24 @@ export function EnvironmentManagerComponent() {
       };
       
       ws.onmessage = (event) => {
-        // ... (existing message handler logic)
+        const message = event.type;
+        console.log(`WebSocket message: ${message}`);
+        // Debounce the environment updates
+        if (debounceTimeoutRef.current) {
+          clearTimeout(debounceTimeoutRef.current);
+        }
+
+        debounceTimeoutRef.current = setTimeout(async () => {
+          try {
+            // Use the ref to get the current folder ID
+            const currentFolderId = selectedFolderRef.current?.id;
+            console.log(`Updating environments for folder: ${currentFolderId}`);
+            await updateEnvironments(currentFolderId);
+
+          } catch (error) {
+            console.error('Error updating environments:', error);
+          }
+        }, 500); // Adjust debounce time as needed (300ms here)
       };
       
       ws.onerror = (error) => {
@@ -381,7 +398,7 @@ export function EnvironmentManagerComponent() {
     }
   };
 
-  const updateUserSettingsHandler = async (settings: UserSettings) => {
+  const updateUserSettingsHandler = async (settings: UserSettingsInput) => {
     try {
       await updateUserSettings(settings);
       setUserSettings(settings);
