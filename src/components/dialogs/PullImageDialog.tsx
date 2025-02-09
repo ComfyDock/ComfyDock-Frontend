@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
-import { pullImageStream } from '@/api/environmentApi'
+import { pullImageStream, pullImageStreamMock } from '@/api/environmentApi'
 
 interface ImagePullDialogProps {
   image: string

@@ -36,11 +36,16 @@ export default function CreateEnvironmentDialog({
     isInstalling,
     setInstallComfyUIDialog,
     setIsOpen,
+    setIsLoading,
+    setPendingEnvironment,
     setPullImageDialog,
     handleSubmit,
     handleInstallComfyUI,
+    continueCreateEnvironment,
     handleInstallFinished,
     handleEnvironmentTypeChange
+
+
   } = useEnvironmentCreation(formDefaults, releaseOptions, createEnvironmentHandler, toast);
 
   useEffect(() => {
@@ -67,20 +72,41 @@ export default function CreateEnvironmentDialog({
         actionText="Yes"
         alternateActionText="Proceed without ComfyUI"
         onAction={handleInstallComfyUI}
-        onCancel={() => setInstallComfyUIDialog(false)}
-        onAlternateAction={() => handleInstallFinished(pendingEnvironment)}
+        onCancel={() => {
+          console.log("onCancel")
+          setInstallComfyUIDialog(false);
+          setIsLoading(false);
+        }}
+        onAlternateAction={() => {
+          console.log("onAlternateAction")
+          setInstallComfyUIDialog(false);
+          continueCreateEnvironment(pendingEnvironment, false);
+          setIsLoading(false);
+        }}
         variant="default"
+
         loading={isInstalling}
       />
 
       <ImagePullDialog
         image={pendingEnvironment?.image || ""}
         open={pullImageDialog}
-        onOpenChange={setPullImageDialog}
-        onSuccess={() => handleInstallFinished(pendingEnvironment)}
+        onOpenChange={(open) => {
+          setPullImageDialog(open);
+          if (!open) {
+            setPendingEnvironment(null);
+            setIsLoading(false);
+          }
+        }}
+        onSuccess={() => {
+          setPullImageDialog(false);
+          setIsLoading(true);
+          handleInstallFinished(pendingEnvironment);
+        }}
       />
 
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+
+      <Dialog open={isOpen} onOpenChange={installComfyUIDialog ? undefined : setIsOpen}>
         <DialogTrigger asChild>{children}</DialogTrigger>
         <DialogContent className="max-h-[80vh] min-w-[600px] overflow-y-auto dialog-content">
           <DialogHeader>

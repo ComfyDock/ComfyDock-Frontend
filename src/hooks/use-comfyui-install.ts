@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { UseFormReturn } from 'react-hook-form';
 import { EnvironmentInput, Mount } from '@/types/Environment';
-import { checkValidComfyUIPath, tryInstallComfyUI } from '@/api/environmentApi';
+import { tryInstallComfyUI } from '@/api/environmentApi';
 import { getDefaultMountConfigsForEnvType } from '@/components/utils/MountConfigUtils';
 import { useToast } from '@/hooks/use-toast';
 import { joinPaths, updateComfyUIPath } from '@/components/utils/PathUtils';
@@ -12,7 +12,7 @@ export const useComfyUIInstall = (
   form: UseFormReturn<any>,
   releaseOptions: string[],
   toast: ReturnType<typeof useToast>['toast'],
-  handleInstallFinished?: (updatedComfyUIPath: string, updatedMountConfig: Mount[]) => void,
+  handleInstallFinished?: (updatedComfyUIPath: string, updatedMountConfig: Mount[]) => Promise<void>,
 ) => {
   const [installComfyUIDialog, setInstallComfyUIDialog] = useState(false);
   const [isInstalling, setIsInstalling] = useState(false);
@@ -30,7 +30,7 @@ export const useComfyUIInstall = (
 
       const finalMounts = updateMountConfigs(updatedPath);
       setInstallComfyUIDialog(false);
-      handleInstallFinished?.(updatedPath, finalMounts);
+      await handleInstallFinished?.(updatedPath, finalMounts);
       toast({ title: "Success", description: "ComfyUI installed successfully" });
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });

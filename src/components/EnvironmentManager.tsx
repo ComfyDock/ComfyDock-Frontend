@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   ExternalLink,
@@ -35,6 +35,7 @@ import { CustomAlertDialog } from "./dialogs/CustomAlertDialog";
 
 const POLL_INTERVAL = 2000;
 const SUCCESS_TOAST_DURATION = 2000;
+const WS_URL = "ws://localhost:5172/ws";
 
 export function EnvironmentManagerComponent() {
   const [environments, setEnvironments] = useState<Environment[]>([]);
@@ -51,7 +52,115 @@ export function EnvironmentManagerComponent() {
     DEFAULT_FOLDERS[0]
   );
   const [folderDeleteOpen, setFolderDeleteOpen] = useState(false);
+  const [socket, setSocket] = useState<WebSocket | null>(null);
+  const [connectionStatus, setConnectionStatus] = useState<
+    "connected" | "disconnected"
+  >("disconnected");
   const { toast } = useToast();
+
+  const selectedFolderRef = useRef<Folder | null>(null);
+  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Update the ref whenever selectedFolder changes
+  useEffect(() => {
+    selectedFolderRef.current = selectedFolder;
+  }, [selectedFolder]);
+
+  useEffect(() => {
+    let reconnectInterval: NodeJS.Timeout | undefined;
+    let wsInstance: WebSocket | null = null; // Track the current WebSocket instance
+  
+    function connect() {
+      // Clean up any existing connection before creating a new one
+      if (wsInstance) {
+        wsInstance.close(); // Explicitly close previous connection
+        wsInstance = null;
+      }
+  
+      const ws = new WebSocket(WS_URL);
+      wsInstance = ws; // Store reference to current instance
+      
+      ws.onopen = () => {
+        console.log("WebSocket connection established");
+        setConnectionStatus('connected');
+        setIsLoading(false);
+        // Clear any existing reconnection interval
+        if (reconnectInterval) {
+          clearInterval(reconnectInterval);
+          reconnectInterval = undefined;
+        }
+      };
+      
+      ws.onmessage = (event) => {
+        // ... (existing message handler logic)
+      };
+      
+      ws.onerror = (error) => {
+        console.error('WebSocket error:', error);
+        // Close the faulty connection immediately
+        ws.close();
+        handleDisconnect();
+      };
+      
+      ws.onclose = () => {
+        handleDisconnect();
+      };
+  
+      setSocket(ws);
+    }
+  
+    function handleDisconnect() {
+      setConnectionStatus('disconnected');
+      setIsLoading(true);
+      
+      // Clean up current instance
+      if (wsInstance) {
+        wsInstance.close();
+        wsInstance = null;
+      }
+  
+      // Start polling for reconnection if not already polling
+      if (!reconnectInterval) {
+        reconnectInterval = setInterval(() => {
+          console.log("Attempting to reconnect...");
+          connect();
+        }, POLL_INTERVAL);
+      }
+    }
+  
+    // Initial connection
+    connect();
+  
+    // Cleanup function for effect
+    return () => {
+      // Clear any existing interval
+      if (reconnectInterval) {
+        clearInterval(reconnectInterval);
+      }
+      
+      // Close any existing WebSocket connection
+      if (wsInstance) {
+        wsInstance.close();
+      }
+      
+      // Clear the socket state
+      setSocket(null);
+    };
+  }, []);
+
+  useEffect(() => {
+    try {
+      updateEnvironments(selectedFolder?.id);
+    } catch (error) {
+      console.error("Error updating environments:", error);
+      setIsLoading(true);
+    }
+    return () => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const updateEnvironments = async (folderId?: string) => {
     try {
@@ -291,22 +400,22 @@ export function EnvironmentManagerComponent() {
   }, []);
 
   // Poll every 5 seconds to refresh the environments
-  useEffect(() => {
-    updateEnvironments(selectedFolder?.id);
-    const retryInterval = setInterval(async () => {
-      try {
-        await updateEnvironments(selectedFolder?.id);
-      } catch (error) {
-        console.error("Error updating environments1:", error);
-        setIsLoading(true);
-      }
-    }, POLL_INTERVAL);
-    return () => clearInterval(retryInterval);
-  }, [selectedFolder?.id]);
+  // useEffect(() => {
+  //   updateEnvironments(selectedFolder?.id);
+  //   const retryInterval = setInterval(async () => {
+  //     try {
+  //       await updateEnvironments(selectedFolder?.id);
+  //     } catch (error) {
+  //       console.error("Error updating environments1:", error);
+  //       setIsLoading(true);
+  //     }
+  //   }, POLL_INTERVAL);
+  //   return () => clearInterval(retryInterval);
+  // }, [selectedFolder?.id]);
 
   return (
     <div className="container min-w-[100vw] min-h-screen mx-auto p-4 relative">
-      {isLoading && (
+      {connectionStatus === "disconnected" && (
         <div className="fixed inset-0 bg-zinc-200/50 dark:bg-zinc-800/50 backdrop-blur-sm flex flex-col items-center justify-center z-50">
           <Loader2 className="w-12 h-12 text-zinc-900 dark:text-zinc-50 animate-spin mb-4" />
           <p className="text-zinc-900 dark:text-zinc-50 text-lg font-semibold">

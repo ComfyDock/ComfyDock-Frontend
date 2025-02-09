@@ -64,7 +64,26 @@ export const useEnvironmentCreation = (
     setInstallComfyUIDialog,
     isInstalling,
     handleInstallComfyUI
-  } = useComfyUIInstall(form, releaseOptions, toast);
+  } = useComfyUIInstall(form, releaseOptions, toast, async (updatedComfyUIPath: string, updatedMountConfig: Mount[]) => {
+    if (!pendingEnvironment) throw new Error("No pending environment");
+    form.setValue("comfyUIPath", updatedComfyUIPath);
+    form.setValue("mountConfig", updatedMountConfig)
+
+    const updatedEnvironment: EnvironmentInput = {
+      ...pendingEnvironment,
+      comfyui_path: updatedComfyUIPath,
+      name: pendingEnvironment?.name || "",
+      image: pendingEnvironment?.image || "",
+      options: {
+        ...pendingEnvironment?.options,
+        "comfyui_path": updatedComfyUIPath,
+        "mount_config": {mounts: updatedMountConfig},
+      }
+    };
+    setPendingEnvironment(updatedEnvironment);
+    await continueCreateEnvironment(updatedEnvironment);
+  });
+
 
   const createEnvironment = useCallback(async (env: EnvironmentInput | null) => {
     if (!env) return;
@@ -90,8 +109,41 @@ export const useEnvironmentCreation = (
     }
   }, [createHandler, form, defaultValues, toast]);
 
+  const continueCreateEnvironment = useCallback(async (env: EnvironmentInput | null, installComfyUI: boolean = true) => {
+    if (!env) return;
+    try {
+      let imageExists = false;
+      let pathValid = false;
+      try {
+        if (installComfyUI) {
+          pathValid = await checkValidComfyUIPath(env.comfyui_path || "");
+        }
+        imageExists = await checkImageExists(env.image);
+      } catch (error: any) {
+        toast({
+          title: "Error",
+          description: error.message,
+          variant: "destructive"
+        });
+      }
+
+      if (installComfyUI && !pathValid) return setInstallComfyUIDialog(true);
+      if (!imageExists) return setPullImageDialog(true);
+
+
+      await createEnvironment(env);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  }, [createEnvironment, setInstallComfyUIDialog, setPullImageDialog, toast]);
+
   const handleSubmit = useCallback(async (values: EnvironmentFormValues) => {
     try {
+
       setIsLoading(true);
       const release = getLatestComfyUIReleaseFromBranch(values.release || "latest", releaseOptions);
       
@@ -110,18 +162,11 @@ export const useEnvironmentCreation = (
 
       setPendingEnvironment(newEnvironment);
       
-      const [imageExists, pathValid] = await Promise.all([
-        checkImageExists(newEnvironment.image),
-        checkValidComfyUIPath(newEnvironment.comfyui_path || "")
-      ]);
-
-      if (!imageExists) return setPullImageDialog(true);
-      if (!pathValid) return setInstallComfyUIDialog(true);
-
-      await createEnvironment(newEnvironment);
+      await continueCreateEnvironment(newEnvironment);
     } catch (error) {
       toast({
         title: "Error",
+
         description: error instanceof Error ? error.message : "Submission failed",
         variant: "destructive"
       });
@@ -146,11 +191,15 @@ export const useEnvironmentCreation = (
     isInstalling,
     setInstallComfyUIDialog,
     setIsOpen,
+    setIsLoading,
+    setPendingEnvironment,
     setPullImageDialog,
     handleSubmit,
     handleInstallComfyUI,
+    continueCreateEnvironment,
     handleInstallFinished: createEnvironment,
     handleEnvironmentTypeChange
+
   };
 };
 
