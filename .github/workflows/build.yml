@@ -55,5 +55,5 @@ jobs:
         push: true
         platforms: linux/amd64,linux/arm64
         tags: |
-          akatzai/comfy-env-frontend:${{ env.VERSION }}
-          akatzai/comfy-env-frontend:latest
+          akatzai/comfydock-frontend:${{ env.version }}
+          akatzai/comfydock-frontend:latest
