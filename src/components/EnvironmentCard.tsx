@@ -25,8 +25,8 @@ import SettingsEnvironmentDialog from "./dialogs/SettingsEnvironmentDialog";
 import LogDisplayDialog from "./dialogs/LogDisplayDialog";
 import DuplicateEnvironmentDialog from "./dialogs/DuplicateEnvironmentDialog";
 import { CustomAlertDialog } from "./dialogs/CustomAlertDialog";
-import { StatusBadge } from "./utils/StatusBadge";
-import { ToolTip } from "./utils/Tooltip";
+import { StatusBadge } from "./atoms/StatusBadge";
+import { ToolTip } from "./atoms/Tooltip";
 import { Folder } from "@/types/UserSettings";
 
 type EnvironmentCardProps = {
@@ -148,7 +148,6 @@ export default function EnvironmentCard({
 
             <DuplicateEnvironmentDialog
               environment={environment}
-              environments={environments}
               duplicateEnvironmentHandler={duplicateEnvironmentHandler}
               open={duplicateEnvironmentDialogOpen}
               onOpenChange={setDuplicateEnvironmentDialogOpen}

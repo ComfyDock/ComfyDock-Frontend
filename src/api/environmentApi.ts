@@ -117,21 +117,33 @@ export function connectToLogStream(environmentId: string, onLogReceived: (log: s
 }
 
 export async function checkValidComfyUIPath(comfyUIPath: string): Promise<boolean> {
-  const response = await fetch(`${API_BASE_URL}/valid-comfyui-path`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ path: comfyUIPath }),
-  });
-  if (!response.ok) {
-    return false;
+  try {
+    const response = await fetch(`${API_BASE_URL}/comfyui/validate-path`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ path: comfyUIPath }),
+    });
+
+    const data = await response.json();
+    
+    if (!response.ok) {
+      // Handle structured error response
+      const errorDetail = data.detail?.error || data.message || 'Unknown error';
+      throw new Error(`${errorDetail}`);
+    }
+
+    return true;
+  } catch (error: any) {
+    console.error('Validation error:', error);
+    throw new Error(`Failed to validate path: ${error.message}`);
   }
-  return true;
+
 }
 
 export async function tryInstallComfyUI(comfyUIPath: string, branch: string = "master") {
-  const response = await fetch(`${API_BASE_URL}/install-comfyui`, {
+  const response = await fetch(`${API_BASE_URL}/comfyui/install`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -192,6 +204,22 @@ export async function checkImageExists(image: string) {
   return true;
 }
 
+export function pullImageStreamMock(image: string, onProgress: (progress: number) => void): Promise<void> {
+  return new Promise((resolve) => {
+    let progress = 0;
+    const interval = setInterval(() => {
+      if (progress < 100) {
+        progress += 10; // Increment progress by 10
+        onProgress(progress);
+      } else {
+        clearInterval(interval);
+        console.log("Image pull completed.");
+        resolve();
+      }
+    }, 500); // Update progress every 500 milliseconds
+  });
+}
+
 export function pullImageStream(image: string, onProgress: (progress: number) => void): Promise<void> {
   return new Promise((resolve, reject) => {
     const encodedImage = encodeURIComponent(image)
@@ -227,7 +255,7 @@ export function pullImageStream(image: string, onProgress: (progress: number) =>
 }
 
 export async function createFolder(name: string): Promise<Folder> {
-  const response = await fetch(`${API_BASE_URL}/folders`, {
+  const response = await fetch(`${API_BASE_URL}/user-settings/folders`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ name })
@@ -240,7 +268,7 @@ export async function createFolder(name: string): Promise<Folder> {
 }
 
 export async function updateFolder(id: string, name: string): Promise<Folder> {
-  const response = await fetch(`${API_BASE_URL}/folders/${id}`, {
+  const response = await fetch(`${API_BASE_URL}/user-settings/folders/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ name })
@@ -253,7 +281,7 @@ export async function updateFolder(id: string, name: string): Promise<Folder> {
 }
 
 export async function deleteFolder(id: string): Promise<{status: string}> {
-  const response = await fetch(`${API_BASE_URL}/folders/${id}`, {
+  const response = await fetch(`${API_BASE_URL}/user-settings/folders/${id}`, {
     method: 'DELETE'
   });
   if (!response.ok) {

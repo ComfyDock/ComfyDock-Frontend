@@ -6,9 +6,9 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { useFormContext } from "react-hook-form";
 
 interface FormFieldComponentProps {
-  control: any;
   name: string;
   label: string;
   placeholder: string;
@@ -18,18 +18,19 @@ interface FormFieldComponentProps {
 }
 
 const FormFieldComponent = ({
-  control,
   name,
   label,
   placeholder,
   type = "text",
   onChange,
   children,
-}: FormFieldComponentProps) => (
-  <FormField
-    control={control}
-    name={name}
-    render={({ field }) => (
+}: FormFieldComponentProps) => {
+  const { control } = useFormContext();
+  return (
+    <FormField
+      control={control}
+      name={name}
+      render={({ field }) => (
       <FormItem className="grid grid-cols-4 items-center gap-4">
         <FormLabel className="text-right">{label}</FormLabel>
         <FormControl className="col-span-3">
@@ -49,8 +50,9 @@ const FormFieldComponent = ({
         </FormControl>
         <FormMessage className="col-start-2 col-span-3" />
       </FormItem>
-    )}
-  />
-);
+      )}
+    />
+  );
+};
 
 export default FormFieldComponent;
