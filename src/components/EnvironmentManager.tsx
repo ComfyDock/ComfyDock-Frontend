@@ -445,7 +445,7 @@ export function EnvironmentManagerComponent() {
       )}
 
       <h1 className="text-4xl font-bold mb-8 text-center bg-gradient-to-r from-blue-600 to-teal-600 text-transparent bg-clip-text title">
-        ComfyUI Environment Manager
+        ComfyDock
       </h1>
 
       <div className="flex flex-col md:flex-row items-center justify-between mb-4">
