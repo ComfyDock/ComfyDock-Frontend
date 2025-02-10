@@ -1,9 +1,7 @@
 name: Build and Push Docker Image
 
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
 
 jobs:
   build:
@@ -23,8 +21,29 @@ jobs:
         password: ${{ secrets.DOCKER_TOKEN }}
 
     - name: Extract version from package.json
-      id: vars
-      run: echo "VERSION=$(jq -r '.version' package.json)" >> $GITHUB_ENV
+      id: version
+      run: |
+        VERSION=$(jq -r '.version' package.json)
+        echo "Extracted version: $VERSION"
+        echo "version=$VERSION" >> $GITHUB_ENV
+
+    - name: Create and push version tag
+      run: |
+        git config --global user.name "GitHub Actions"
+        git config --global user.email "actions@github.com"
+        git tag v${{ steps.version.outputs.version }}
+        git push origin v${{ steps.version.outputs.version }}
+
+    - name: Create GitHub Release
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: v${{ steps.version.outputs.version }}
+        name: Release v${{ steps.version.outputs.version }}
+        draft: false
+        prerelease: false
+        generate_release_notes: true
 
     - name: Build and push Docker image
       uses: docker/build-push-action@v4
