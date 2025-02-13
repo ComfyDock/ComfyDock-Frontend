@@ -51,7 +51,6 @@ export function EnvironmentManagerComponent() {
   const [selectedFolder, setSelectedFolder] = useState<Folder | null>(
     DEFAULT_FOLDERS[0]
   );
-  const [folderDeleteOpen, setFolderDeleteOpen] = useState(false);
   const [socket, setSocket] = useState<WebSocket | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<
     "connected" | "disconnected"
@@ -83,7 +82,6 @@ export function EnvironmentManagerComponent() {
       ws.onopen = () => {
         console.log("WebSocket connection established");
         setConnectionStatus('connected');
-        setIsLoading(false);
         // Clear any existing reconnection interval
         if (reconnectInterval) {
           clearInterval(reconnectInterval);
@@ -128,7 +126,6 @@ export function EnvironmentManagerComponent() {
   
     function handleDisconnect() {
       setConnectionStatus('disconnected');
-      setIsLoading(true);
       
       // Clean up current instance
       if (wsInstance) {
@@ -167,10 +164,17 @@ export function EnvironmentManagerComponent() {
 
   useEffect(() => {
     try {
+      setIsLoading(true);
       updateEnvironments(selectedFolder?.id);
+      setIsLoading(false);
     } catch (error) {
       console.error("Error updating environments:", error);
-      setIsLoading(true);
+      toast({
+        title: "Error",
+        description: `Failed to update environments: ${error}`,
+        variant: "destructive",
+      });
+      setIsLoading(false);
     }
     return () => {
       if (debounceTimeoutRef.current) {
@@ -184,7 +188,6 @@ export function EnvironmentManagerComponent() {
       const curFolder = folderId || selectedFolder?.id;
       const fetchedEnvironments = await fetchEnvironments(curFolder);
       setEnvironments(fetchedEnvironments);
-      setIsLoading(false);
     } catch (error) {
       console.error("Failed to fetch environments:", error);
       throw Error(`Failed to fetch environments: ${error}`);
@@ -432,7 +435,7 @@ export function EnvironmentManagerComponent() {
 
   return (
     <div className="container min-w-[100vw] min-h-screen mx-auto p-4 relative">
-      {connectionStatus === "disconnected" && (
+      {isLoading && (
         <div className="fixed inset-0 bg-zinc-200/50 dark:bg-zinc-800/50 backdrop-blur-sm flex flex-col items-center justify-center z-50">
           <Loader2 className="w-12 h-12 text-zinc-900 dark:text-zinc-50 animate-spin mb-4" />
           <p className="text-zinc-900 dark:text-zinc-50 text-lg font-semibold">
@@ -510,6 +513,14 @@ export function EnvironmentManagerComponent() {
           onEditFolder={handleEditFolder}
           onDeleteFolder={handleDeleteFolder}
         />
+        <div className="flex items-center space-x-2 pr-4">
+          <span className="font-medium">Websocket</span>
+          <span
+            className={`h-3 w-3 rounded-full ${
+              connectionStatus === "connected" ? "bg-green-500" : "bg-red-500"
+            }`}
+          />
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-8">
