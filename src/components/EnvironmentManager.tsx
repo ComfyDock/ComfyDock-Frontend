@@ -190,6 +190,11 @@ export function EnvironmentManagerComponent() {
       setEnvironments(fetchedEnvironments);
     } catch (error) {
       console.error("Failed to fetch environments:", error);
+      toast({
+        title: "Error",
+        description: `Failed to fetch environments: ${error}`,
+        variant: "destructive",
+      });
       throw Error(`Failed to fetch environments: ${error}`);
       // Keep isLoading true to continue showing the loading state
     }
@@ -514,7 +519,7 @@ export function EnvironmentManagerComponent() {
           onDeleteFolder={handleDeleteFolder}
         />
         <div className="flex items-center space-x-2 pr-4">
-          <span className="font-medium">Websocket</span>
+          <span className="font-medium">Connection</span>
           <span
             className={`h-3 w-3 rounded-full ${
               connectionStatus === "connected" ? "bg-green-500" : "bg-red-500"
