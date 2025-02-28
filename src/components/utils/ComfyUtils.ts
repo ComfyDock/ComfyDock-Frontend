@@ -1,10 +1,15 @@
 
-export const COMFYUI_IMAGE_NAME = "akatzai/comfyui-env"
+export const COMFYUI_IMAGE_NAME = "akatzai/comfydock-env"
 
-export const getLatestComfyUIReleaseFromBranch = (branch: string, releases: string[]) => {
-  if (branch === "latest") {
-    const filteredReleases = releases.filter(release => release !== "latest");
-    return filteredReleases[0] || "latest"; // fallback to latest if none found
-  }
-  return branch;
+// TODO: Replace with actual API call
+export const getLatestComfyUIReleases = () => {
+  return [
+    'master',
+    'v0.3.15',
+    'v0.3.14',
+    'v0.3.13',
+    'v0.3.12',
+    'v0.3.11',
+    'v0.3.10',
+  ]
 }

@@ -1,26 +1,22 @@
 import { useState } from 'react';
 import { UseFormReturn } from 'react-hook-form';
-import { EnvironmentInput, Mount } from '@/types/Environment';
+import { EnvironmentFormValues, Mount } from '@/types/Environment';
 import { tryInstallComfyUI } from '@/api/environmentApi';
 import { getDefaultMountConfigsForEnvType } from '@/components/utils/MountConfigUtils';
 import { useToast } from '@/hooks/use-toast';
 import { joinPaths, updateComfyUIPath } from '@/components/utils/PathUtils';
-import { getLatestComfyUIReleaseFromBranch } from '@/components/utils/ComfyUtils';
-
 
 export const useComfyUIInstall = (
-  form: UseFormReturn<any>,
-  releaseOptions: string[],
+  form: UseFormReturn<EnvironmentFormValues>,
   toast: ReturnType<typeof useToast>['toast'],
   handleInstallFinished?: (updatedComfyUIPath: string, updatedMountConfig: Mount[]) => Promise<void>,
 ) => {
   const [installComfyUIDialog, setInstallComfyUIDialog] = useState(false);
   const [isInstalling, setIsInstalling] = useState(false);
 
-  const handleInstallComfyUI = async () => {
+  const handleInstallComfyUI = async (branch: string) => {
     try {
       const comfyUIPath = form.getValues("comfyUIPath");
-      const branch = getLatestComfyUIReleaseFromBranch(form.getValues("release"), releaseOptions);
       
       setIsInstalling(true);
       await tryInstallComfyUI(comfyUIPath, branch);
@@ -30,16 +26,20 @@ export const useComfyUIInstall = (
 
       const finalMounts = updateMountConfigs(updatedPath);
       setInstallComfyUIDialog(false);
-      await handleInstallFinished?.(updatedPath, finalMounts);
+      await handleInstallFinished?.(updatedPath, finalMounts || []);
       toast({ title: "Success", description: "ComfyUI installed successfully" });
-    } catch (error: any) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        toast({ title: "Error", description: error.message, variant: "destructive" });
+      } else {
+        toast({ title: "Error", description: "An unknown error occurred", variant: "destructive" });
+      }
     } finally {
       setIsInstalling(false);
     }
   };
 
-  const updateMountConfigs = (comfyUIPath: string) => {
+  const updateMountConfigs = (comfyUIPath: string): Mount[] => {
     const currentType = form.getValues("environmentType");
     const updatedMounts = form.getValues("mountConfig").map((config: Mount) => {
       if (!config.override) {
@@ -51,8 +51,8 @@ export const useComfyUIInstall = (
     
     const finalMounts = currentType === 'Custom' ? updatedMounts : 
       getDefaultMountConfigsForEnvType(currentType, comfyUIPath);
-    form.setValue("mountConfig", finalMounts);
-    return finalMounts;
+    form.setValue("mountConfig", finalMounts || []);
+    return finalMounts || [];
   };
 
   return {

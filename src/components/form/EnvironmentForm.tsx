@@ -1,4 +1,10 @@
-import { FormProvider, useFieldArray, useWatch, UseFormReturn } from "react-hook-form";
+import React from "react";
+import {
+  FormProvider,
+  useFieldArray,
+  useWatch,
+  UseFormReturn,
+} from "react-hook-form";
 import { EnvironmentFormValues, Mount } from "@/types/Environment";
 import {
   EnvironmentTypeDescriptions,
@@ -22,7 +28,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import {
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { useEffect } from "react";
 import { getDefaultMountConfigsForEnvType } from "@/components/utils/MountConfigUtils";
 import { joinPaths } from "@/components/utils/PathUtils";
@@ -55,48 +67,54 @@ export function EnvironmentForm({
   });
 
   const handleMountConfigChange = () => {
-    console.log("handleMountConfigChange")
+    console.log("handleMountConfigChange");
     form.setValue("environmentType", EnvironmentTypeEnum.Custom);
   };
 
   const comfyUIPath = useWatch({
     control: form.control,
     name: "comfyUIPath",
-  })
+  });
 
   // Effects
   useEffect(() => {
-    console.log("useEffect in EnvironmentForm")
+    console.log("useEffect in EnvironmentForm");
     const debounceTimer = setTimeout(() => {
       const currentEnvType = form.getValues("environmentType");
-      
+
       if (currentEnvType === EnvironmentTypeEnum.Custom) {
         // For custom environments, update non-overridden paths
-        const updatedMountConfig = form.getValues("mountConfig").map((config: Mount) => {
-          if (!config.override) {
-            const containerDir = config.container_path.split('/').pop() || '';
-            return {
-              ...config,
-              host_path: joinPaths(comfyUIPath, containerDir)
-            };
-          }
-          return config;
-        });
-        console.log(`updatedMountConfig: ${JSON.stringify(updatedMountConfig)}`)
+        const updatedMountConfig = form
+          .getValues("mountConfig")
+          .map((config: Mount) => {
+            if (!config.override) {
+              const containerDir = config.container_path.split("/").pop() || "";
+              return {
+                ...config,
+                host_path: joinPaths(comfyUIPath, containerDir),
+              };
+            }
+            return config;
+          });
+        console.log(
+          `updatedMountConfig: ${JSON.stringify(updatedMountConfig)}`
+        );
         form.setValue("mountConfig", updatedMountConfig);
       } else {
         // For preset environment types, regenerate the default config
-        const newMountConfig = getDefaultMountConfigsForEnvType(currentEnvType as EnvironmentTypeEnum, comfyUIPath);
+        const newMountConfig = getDefaultMountConfigsForEnvType(
+          currentEnvType as EnvironmentTypeEnum,
+          comfyUIPath
+        );
         if (newMountConfig) {
           form.setValue("mountConfig", newMountConfig as Mount[]);
-          console.log(`newMountConfig: ${JSON.stringify(newMountConfig)}`)
+          console.log(`newMountConfig: ${JSON.stringify(newMountConfig)}`);
         }
       }
     }, 300); // 300ms debounce
-  
+
     return () => clearTimeout(debounceTimer);
   }, [comfyUIPath, form]);
-
 
   return (
     <FormProvider {...form}>
@@ -163,6 +181,59 @@ export function EnvironmentForm({
             )}
           />
 
+          {/* Mount Config */}
+          <Accordion type="single" collapsible className="w-full px-1">
+            <AccordionItem value="mount-config" className="overflow-hidden">
+              <AccordionTrigger className="text-md font-semibold py-2 px-2">
+                Mount Config
+              </AccordionTrigger>
+              <AccordionContent className="overflow-visible">
+                <div className="space-y-4 px-4 transition-all duration-300 ease-in-out">
+                  <div className="min-h-[50px]">
+                    {/* <FormLabel>Mount Config</FormLabel> */}
+                    <div className="space-y-2 pt-2 rounded-lg">
+                      {/* Header Row for Column Titles */}
+                      <div className="flex items-center space-x-2 mb-2">
+                        <div className="w-40">Override</div>
+                        <div className="w-full">Host Path</div>
+                        <div className="w-full">Container Path</div>
+                        <div className="w-full">Action</div>
+                      </div>
+                      <div className="max-h-[300px] overflow-y-auto pr-2">
+                        {fields.map((field, index) => (
+                          <MountConfigRow
+                            key={field.id}
+                            index={index}
+                            remove={remove}
+                            onActionChange={handleMountConfigChange}
+                          />
+                        ))}
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="mt-2"
+                        onClick={() => {
+                          append({
+                            type: MountActionEnum.Mount,
+                            container_path: "",
+                            host_path: "",
+                            read_only: false,
+                            override: false,
+                          });
+                          handleMountConfigChange();
+                        }}
+                      >
+                        Add Directory
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+
           {/* Advanced Options */}
           <Accordion type="single" collapsible className="w-full px-1">
             <AccordionItem value="advanced-options">
@@ -206,44 +277,19 @@ export function EnvironmentForm({
                     placeholder="Port number"
                     type="number"
                   />
-                  <div>
-                    <FormLabel>Mount Config</FormLabel>
-                    <div className="space-y-2 pt-2 rounded-lg">
-                      {/* Header Row for Column Titles */}
-                      <div className="flex items-center space-x-2 mb-2">
-                        <div className="w-40">Override</div>
-                        <div className="w-full">Host Path</div>
-                        <div className="w-full">Container Path</div>
-                        <div className="w-full">Action</div>
-                      </div>
-                      {fields.map((field, index) => (
-                        <MountConfigRow
-                          key={field.id}
-                          index={index}
-                          remove={remove}
-                          onActionChange={handleMountConfigChange}
-                        />
-                      ))}
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="mt-2"
-                        onClick={() => {
-                          append({
-                            type: MountActionEnum.Mount,
-                            container_path: "",
-                            host_path: "",
-                            read_only: false,
-                            override: false,
-                          });
-                          handleMountConfigChange();
-                        }}
-                      >
-                        Add Directory
-                      </Button>
-                    </div>
-                  </div>
+                  {/* <FormFieldComponent
+                    name="environmentVariables"
+                    label="Environment Variables"
+                    placeholder="VAR1=1, VAR2=2, etc."
+                    type="text"
+                  />
+
+                  <FormFieldComponent
+                    name="entrypoint"
+                    label="Override Entrypoint"
+                    placeholder="uv run python main.py --listen 0.0.0.0"
+                    type="text"
+                  /> */}
                 </div>
               </AccordionContent>
             </AccordionItem>

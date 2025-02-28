@@ -40,11 +40,11 @@ export default function DuplicateEnvironmentDialog({
       form.reset(formDefaults)
       console.log(form.getValues())
     }
-  }, [open]);
+  }, [open, form, formDefaults]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[80vh] min-w-[600px] overflow-y-auto dialog-content">
+      <DialogContent className="max-h-[80vh] min-w-[600px] overflow-y-auto [scrollbar-gutter:stable] dialog-content">
         <DialogHeader>
           <DialogTitle>Duplicate Environment</DialogTitle>
         </DialogHeader>

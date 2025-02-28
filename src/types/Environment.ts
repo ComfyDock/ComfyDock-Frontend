@@ -50,8 +50,17 @@ export type MountConfig = {
 export const baseFormSchema = z.object({
   name: z.string().min(1, { message: "Environment name is required" }).max(128, { message: "Environment name must be less than 128 characters" }),
   comfyUIPath: z.string().min(1, { message: "ComfyUI path is required" }),
-  release: z.string().optional(),
-  image: z.string().optional(),
+  image: z.string()
+    .min(1, { message: "Docker image is required" })
+    .nullable()
+    .superRefine((val, ctx) => {
+      if (val === null) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Docker image is required"
+        });
+      }
+    }),
   command: z.string().optional(),
   port: z.string().optional(),
   runtime: z.string().optional(),

@@ -15,10 +15,6 @@ import {
   checkImageExists, 
   checkValidComfyUIPath 
 } from "@/api/environmentApi";
-import { 
-  getLatestComfyUIReleaseFromBranch, 
-  COMFYUI_IMAGE_NAME 
-} from "@/components/utils/ComfyUtils";
 import { getDefaultMountConfigsForEnvType, parseExistingMountConfig } from "@/components/utils/MountConfigUtils";
 import { useToast } from "@/hooks/use-toast";
 
@@ -28,8 +24,7 @@ const SUCCESS_TOAST_DURATION = 2000;
 export const useFormDefaults = (userSettings?: UserSettings) => {
   return useMemo(() => ({
     name: "",
-    release: "latest",
-    image: "",
+    image: null as string | null, // TODO: Add a default based on user's last used image
     comfyUIPath: userSettings?.comfyui_path || DEFAULT_COMFYUI_PATH || "",
     environmentType: EnvironmentTypeEnum.Default,
     command: userSettings?.command || "",
@@ -44,7 +39,6 @@ export const useFormDefaults = (userSettings?: UserSettings) => {
 
 export const useEnvironmentCreation = (
   defaultValues: EnvironmentFormValues,
-  releaseOptions: string[],
   createHandler: (env: EnvironmentInput) => Promise<void>,
   toast: ReturnType<typeof useToast>['toast']
 ) => {
@@ -64,7 +58,7 @@ export const useEnvironmentCreation = (
     setInstallComfyUIDialog,
     isInstalling,
     handleInstallComfyUI
-  } = useComfyUIInstall(form, releaseOptions, toast, async (updatedComfyUIPath: string, updatedMountConfig: Mount[]) => {
+  } = useComfyUIInstall(form, toast, async (updatedComfyUIPath: string, updatedMountConfig: Mount[]) => {
     if (!pendingEnvironment) throw new Error("No pending environment");
     form.setValue("comfyUIPath", updatedComfyUIPath);
     form.setValue("mountConfig", updatedMountConfig)
@@ -119,10 +113,10 @@ export const useEnvironmentCreation = (
           pathValid = await checkValidComfyUIPath(env.comfyui_path || "");
         }
         imageExists = await checkImageExists(env.image);
-      } catch (error: any) {
+      } catch (error: unknown) {
         toast({
           title: "Error",
-          description: error.message,
+          description: error instanceof Error ? error.message : "Unknown error occurred",
           variant: "destructive"
         });
       }
@@ -132,10 +126,10 @@ export const useEnvironmentCreation = (
 
 
       await createEnvironment(env);
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Error",
-        description: error.message,
+        description: error instanceof Error ? error.message : "Unknown error occurred",
         variant: "destructive"
       });
     }
@@ -145,15 +139,13 @@ export const useEnvironmentCreation = (
     try {
 
       setIsLoading(true);
-      const release = getLatestComfyUIReleaseFromBranch(values.release || "latest", releaseOptions);
       
       const newEnvironment: EnvironmentInput = {
         name: values.name,
-        image: values.image || `${COMFYUI_IMAGE_NAME}:${release}`,
+        image: values.image || "",
         command: values.command,
         comfyui_path: values.comfyUIPath,
         options: {
-          comfyui_release: release,
           port: values.port,
           mount_config: { mounts: values.mountConfig },
           runtime: values.runtime,
@@ -166,13 +158,12 @@ export const useEnvironmentCreation = (
     } catch (error) {
       toast({
         title: "Error",
-
         description: error instanceof Error ? error.message : "Submission failed",
         variant: "destructive"
       });
       setIsLoading(false);
     }
-  }, [releaseOptions, createEnvironment, setInstallComfyUIDialog, toast]);
+  }, [toast, continueCreateEnvironment]);
 
   const handleEnvironmentTypeChange = (newType: EnvironmentTypeEnum) => {
     form.setValue("environmentType", newType)
@@ -215,8 +206,7 @@ export const useDuplicateFormDefaults = (
 
     return {
       name: environment.name + "-copy",
-      release: (environment.options?.["comfyui_release"] as string) || "latest",
-      image: "",
+      image: environment.metadata?.["base_image"] as string || "",
       comfyUIPath: environment.comfyui_path || userSettings?.comfyui_path || DEFAULT_COMFYUI_PATH || "",
       environmentType: EnvironmentTypeEnum.Auto,
       command: environment.command || userSettings?.command || "",
@@ -274,11 +264,10 @@ export const useEnvironmentDuplication = (
       
       const newEnvironment: EnvironmentInput = {
         name: values.name,
-        image: values.image || environment.image,
+        image: environment.image,
         command: values.command,
         comfyui_path: values.comfyUIPath,
         options: {
-          comfyui_release: values.release,
           port: values.port,
           mount_config: { mounts: values.mountConfig },
           runtime: values.runtime,
@@ -289,7 +278,7 @@ export const useEnvironmentDuplication = (
     } catch (error) {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Submission failed",
+        description: error instanceof Error ? error.message : "Unknown error occurred",
         variant: "destructive"
       });
       setIsLoading(false);

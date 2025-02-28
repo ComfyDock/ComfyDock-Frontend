@@ -1,6 +1,7 @@
 // src/api/environmentApi.ts
 import { Folder, UserSettingsInput } from '@/types/UserSettings';
 import { Environment, EnvironmentInput, EnvironmentUpdate } from '../types/Environment';
+import { ImageTag, InstalledImage } from '@/types/Images';
 
 const API_BASE_URL = 'http://localhost:5172'; // TODO: put in .env
 
@@ -135,9 +136,14 @@ export async function checkValidComfyUIPath(comfyUIPath: string): Promise<boolea
     }
 
     return true;
-  } catch (error: any) {
-    console.error('Validation error:', error);
-    throw new Error(`Failed to validate path: ${error.message}`);
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      console.error('Validation error:', error.message);
+      throw new Error(`Failed to validate path: ${error.message}`);
+    } else {
+      console.error('Validation error:', error);
+      throw new Error('Failed to validate path');
+    }
   }
 
 }
@@ -185,11 +191,21 @@ export async function updateUserSettings(settings: UserSettingsInput) {
   return response.json();
 }
 
-export async function getComfyUIImageTags() {
+export async function getComfyUIImageTags(): Promise<{ tags: ImageTag[] }> {
   const response = await fetch(`${API_BASE_URL}/images/tags`);
   if (!response.ok) {
     const errorDetails = await response.json()
     console.error(`${response.status} - Failed to get ComfyUI image tags: ${errorDetails.detail}`)
+    throw new Error(`${errorDetails.detail}`);
+  }
+  return response.json();
+}
+
+export async function getInstalledImages(): Promise<{ images: InstalledImage[] }> {
+  const response = await fetch(`${API_BASE_URL}/images/installed`);
+  if (!response.ok) {
+    const errorDetails = await response.json()
+    console.error(`${response.status} - Failed to get installed images: ${errorDetails.detail}`)
     throw new Error(`${errorDetails.detail}`);
   }
   return response.json();
