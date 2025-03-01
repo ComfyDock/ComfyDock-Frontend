@@ -15,9 +15,5 @@ export function joinPaths(basePath: string, subPath: string): string {
 }
 
 export const updateComfyUIPath = (comfyUIPath: string) => {
-  const isUnix = comfyUIPath.includes("/");
-  const isWindows = comfyUIPath.includes("\\");
-  if (isUnix) return comfyUIPath + "/ComfyUI";
-  if (isWindows) return comfyUIPath + "\\ComfyUI";
-  return comfyUIPath;
+  return joinPaths(comfyUIPath, "ComfyUI");
 };

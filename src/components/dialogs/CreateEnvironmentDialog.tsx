@@ -15,7 +15,7 @@ import {
   EnvironmentTypeDescriptions,
   EnvironmentTypeEnum,
 } from "@/types/Environment";
-import { UserSettings } from "@/types/UserSettings";
+import { UserSettings, UserSettingsInput } from "@/types/UserSettings";
 import ImagePullDialog from "@/components/dialogs/PullImageDialog";
 import {
   useEnvironmentCreation,
@@ -24,37 +24,19 @@ import {
 import { DockerImageSelector } from "../DockerImageSelector";
 import { DockerImageSelectFormField } from "../form/DockerImageSelectFormField";
 import { ComfyUIVersionDialog } from "./ComfyUIInstallDialog";
-import { Button } from "../ui/button";
 
 interface CreateEnvironmentDialogProps {
   children: React.ReactNode;
   userSettings?: UserSettings;
   createEnvironmentHandler: (environment: EnvironmentInput) => Promise<void>;
+  updateUserSettingsHandler: (userSettings: UserSettingsInput) => Promise<void>;
 }
-
-const MOCK_INSTALLED_IMAGES = [
-  "akatzai/comfydock-env:v0.3.15-py3.12-cuda12.1-ptstable",
-  "akatzai/comfydock-env:v0.3.15-py3.11-cuda12.1-ptstable",
-  "akatzai/comfydock-env:v0.3.15-py3.10-cuda12.1-ptstable",
-  "akatzai/comfydock-env:v0.3.15-py3.9-cuda12.1-ptstable",
-  "akatzai/comfydock-env:v0.3.15-py3.8-cuda12.1-ptstable",
-  "akatzai/comfydock-env:v0.3.15-py3.7-cuda12.1-ptstable",
-  "akatzai/comfydock-env:v0.3.15-py3.6-cuda12.1-ptstable",
-  "akatzai/comfydock-env:v0.3.15-py3.5-cuda12.1-ptstable",
-  "akatzai/comfydock-env:v0.3.15-py3.4-cuda12.1-ptstable",
-  "akatzai/comfydock-env:v0.3.15-py3.3-cuda12.1-ptstable",
-  "akatzai/comfydock-env:v0.3.15-py3.2-cuda12.1-ptstable",
-  "akatzai/comfydock-env:v0.3.15-py3.1-cuda12.1-ptstable",
-  "akatzai/comfydock-env:v0.3.15-py3.0-cuda12.1-ptstable",
-  "akatzai/comfydock-env:v0.3.15-py2.7-cuda12.1-ptstable",
-  "akatzai/comfydock-env:v0.3.15-py2.6-cuda12.1-ptstable",
-  "akatzai/comfydock-env:v0.3.15-py2.5-cuda12.1-ptstable",
-];
 
 export default function CreateEnvironmentDialog({
   children,
   userSettings,
   createEnvironmentHandler,
+  updateUserSettingsHandler,
 }: CreateEnvironmentDialogProps) {
   const { toast } = useToast();
   const formDefaults = useFormDefaults(userSettings);
@@ -68,6 +50,8 @@ export default function CreateEnvironmentDialog({
     pullImageDialog,
     installComfyUIDialog,
     isInstalling,
+    showSettingsPrompt,
+    installedPath,
     setInstallComfyUIDialog,
     setIsOpen,
     setIsLoading,
@@ -75,17 +59,17 @@ export default function CreateEnvironmentDialog({
     setPullImageDialog,
     handleSubmit,
     handleInstallComfyUI,
+    handleUpdateUserSettings,
+    handleCancelSettingsUpdate,
     continueCreateEnvironment,
     handleInstallFinished,
     handleEnvironmentTypeChange,
-  } = useEnvironmentCreation(
-    formDefaults,
-    createEnvironmentHandler,
-    toast
-  );
+  } = useEnvironmentCreation(formDefaults, createEnvironmentHandler, toast, updateUserSettingsHandler);
 
   useEffect(() => {
     if (isOpen) {
+      console.log("isOpen", isOpen);
+      console.log("formDefaults", formDefaults);
       form.reset(formDefaults);
     }
   }, [formDefaults, isOpen]);
@@ -109,25 +93,44 @@ export default function CreateEnvironmentDialog({
     <>
       <ComfyUIVersionDialog
         open={installComfyUIDialog}
-        title="Could not find valid ComfyUI installation"
-        description="We could not find a valid ComfyUI installation at the path you provided. Should we try to install ComfyUI automatically?"
-        cancelText="No"
-        actionText="Yes"
-        alternateActionText="Proceed without ComfyUI"
-        onAction={(version) => handleInstallComfyUI(version)}
+        title={showSettingsPrompt 
+          ? "Update Default ComfyUI Path" 
+          : "Could not find valid ComfyUI installation"}
+        description={showSettingsPrompt
+          ? `Would you like to use this new ComfyUI path (${installedPath}) as the default for future environments?`
+          : "We could not find a valid ComfyUI installation at the path you provided. Should we try to install ComfyUI automatically?"}
+        cancelText={showSettingsPrompt ? "No" : "No"}
+        actionText={showSettingsPrompt ? "Yes" : "Yes"}
+        alternateActionText={showSettingsPrompt ? undefined : "Proceed without ComfyUI"}
+        onAction={(version) => {
+          console.log("onAction", version);
+          return showSettingsPrompt 
+            ? handleUpdateUserSettings(installedPath)
+            : handleInstallComfyUI(version)
+        }}
         onCancel={() => {
           console.log("onCancel");
-          setInstallComfyUIDialog(false);
-          setIsLoading(false);
+          if (showSettingsPrompt) {
+            handleCancelSettingsUpdate();
+          } else {
+            setInstallComfyUIDialog(false);
+            setIsLoading(false);
+          }
         }}
-        onAlternateAction={() => {
+        onAlternateAction={showSettingsPrompt ? undefined : () => {
           console.log("onAlternateAction");
           setInstallComfyUIDialog(false);
           continueCreateEnvironment(pendingEnvironment, false);
           setIsLoading(false);
         }}
+        onUpdateUserSettings={showSettingsPrompt
+          ? (path) => handleUpdateUserSettings(path)
+          : undefined
+        }
         variant="default"
         loading={isInstalling}
+        showSettingsPrompt={showSettingsPrompt}
+        installedPath={installedPath}
       />
 
       <ImagePullDialog

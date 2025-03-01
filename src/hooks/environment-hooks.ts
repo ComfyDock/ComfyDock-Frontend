@@ -9,7 +9,7 @@ import {
   Mount,
   Environment
 } from "@/types/Environment";
-import { UserSettings } from "@/types/UserSettings";
+import { UserSettings, UserSettingsInput } from "@/types/UserSettings";
 import { useComfyUIInstall } from "@/hooks/use-comfyui-install";
 import { 
   checkImageExists, 
@@ -40,7 +40,8 @@ export const useFormDefaults = (userSettings?: UserSettings) => {
 export const useEnvironmentCreation = (
   defaultValues: EnvironmentFormValues,
   createHandler: (env: EnvironmentInput) => Promise<void>,
-  toast: ReturnType<typeof useToast>['toast']
+  toast: ReturnType<typeof useToast>['toast'],
+  updateUserSettingsHandler: (userSettings: UserSettingsInput) => Promise<void>
 ) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -57,8 +58,12 @@ export const useEnvironmentCreation = (
     installComfyUIDialog, 
     setInstallComfyUIDialog,
     isInstalling,
-    handleInstallComfyUI
-  } = useComfyUIInstall(form, toast, async (updatedComfyUIPath: string, updatedMountConfig: Mount[]) => {
+    handleInstallComfyUI,
+    showSettingsPrompt,
+    installedPath,
+    handleUpdateUserSettings,
+    handleCancelSettingsUpdate
+  } = useComfyUIInstall(form, toast, updateUserSettingsHandler, async (updatedComfyUIPath: string, updatedMountConfig: Mount[]) => {
     if (!pendingEnvironment) throw new Error("No pending environment");
     form.setValue("comfyUIPath", updatedComfyUIPath);
     form.setValue("mountConfig", updatedMountConfig)
@@ -110,7 +115,11 @@ export const useEnvironmentCreation = (
       let pathValid = false;
       try {
         if (installComfyUI) {
-          pathValid = await checkValidComfyUIPath(env.comfyui_path || "");
+          try {
+            pathValid = await checkValidComfyUIPath(env.comfyui_path || "");
+          } catch (error: unknown) {
+            console.error(error);
+          }
         }
         imageExists = await checkImageExists(env.image);
       } catch (error: unknown) {
@@ -180,6 +189,8 @@ export const useEnvironmentCreation = (
     pullImageDialog,
     installComfyUIDialog,
     isInstalling,
+    showSettingsPrompt,
+    installedPath,
     setInstallComfyUIDialog,
     setIsOpen,
     setIsLoading,
@@ -187,10 +198,11 @@ export const useEnvironmentCreation = (
     setPullImageDialog,
     handleSubmit,
     handleInstallComfyUI,
+    handleUpdateUserSettings,
+    handleCancelSettingsUpdate,
     continueCreateEnvironment,
     handleInstallFinished: createEnvironment,
     handleEnvironmentTypeChange
-
   };
 };
 

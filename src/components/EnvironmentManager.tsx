@@ -91,6 +91,7 @@ export function EnvironmentManagerComponent() {
           <CreateEnvironmentDialog
             userSettings={userSettings || undefined}
             createEnvironmentHandler={createEnvironmentHandler}
+            updateUserSettingsHandler={updateUserSettingsHandler}
           >
             <Button className="bg-blue-600 hover:bg-blue-700">
               Create Environment
