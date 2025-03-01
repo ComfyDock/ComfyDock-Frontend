@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { 
@@ -39,6 +39,7 @@ export const useFormDefaults = (userSettings?: UserSettings) => {
 
 export const useEnvironmentCreation = (
   defaultValues: EnvironmentFormValues,
+  selectedFolderRef: React.MutableRefObject<string | undefined>,
   createHandler: (env: EnvironmentInput) => Promise<void>,
   toast: ReturnType<typeof useToast>['toast'],
   updateUserSettingsHandler: (userSettings: UserSettingsInput) => Promise<void>
@@ -86,6 +87,9 @@ export const useEnvironmentCreation = (
 
   const createEnvironment = useCallback(async (env: EnvironmentInput | null) => {
     if (!env) return;
+
+    // Update the environment with the selected folder
+    env.folderIds = [selectedFolderRef.current || ""];
     
     try {
       await createHandler(env);
@@ -232,6 +236,7 @@ export const useDuplicateFormDefaults = (
 export const useEnvironmentDuplication = (
   defaultValues: EnvironmentFormValues,
   environment: Environment,
+  selectedFolderRef: React.MutableRefObject<string | undefined>,
   duplicateHandler: (id: string, env: EnvironmentInput) => Promise<void>,
   setIsOpen: (open: boolean) => void,
   toast: ReturnType<typeof useToast>['toast']
@@ -248,7 +253,9 @@ export const useEnvironmentDuplication = (
     console.log(`createEnvironment called with env: ${JSON.stringify(env)}`)
     if (!env) return;
     console.log(`creating environment with values: ${JSON.stringify(env)}`)
-    
+    // Update the environment with the selected folder
+    env.folderIds = [selectedFolderRef.current || ""];
+    console.log(`updated environment with folderId: ${JSON.stringify(env)}`)
     try {
       await duplicateHandler(environment.id || "", env);
       setIsOpen(false);

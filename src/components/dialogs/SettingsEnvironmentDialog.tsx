@@ -133,7 +133,7 @@ export default function SettingsEnvironmentDialog({
                 <FormItem>
                   <FormLabel>Name</FormLabel>
                   <FormControl>
-                    <Input {...field} />
+                    <Input {...field} autoComplete="off"/>
                   </FormControl>
                   <FormMessage />
                 </FormItem>

@@ -33,6 +33,7 @@ type EnvironmentCardProps = {
   environment: Environment;
   environments: Environment[];
   folders: Folder[];
+  selectedFolderRef: React.MutableRefObject<string | undefined>;
   activatingEnvironment: string | null;
   deletingEnvironment: string | null;
   updateEnvironmentHandler: (id: string, name: string, folderIds?: string[]) => Promise<void>;
@@ -46,6 +47,7 @@ export default function EnvironmentCard({
   environment,
   environments,
   folders,
+  selectedFolderRef,
   activatingEnvironment,
   deletingEnvironment,
   updateEnvironmentHandler,
@@ -148,6 +150,7 @@ export default function EnvironmentCard({
 
             <DuplicateEnvironmentDialog
               environment={environment}
+              selectedFolderRef={selectedFolderRef}
               duplicateEnvironmentHandler={duplicateEnvironmentHandler}
               open={duplicateEnvironmentDialogOpen}
               onOpenChange={setDuplicateEnvironmentDialogOpen}

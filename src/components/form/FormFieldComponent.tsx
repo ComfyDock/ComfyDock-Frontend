@@ -45,6 +45,7 @@ const FormFieldComponent = ({
                 // Then call custom onChange if provided
                 onChange?.(e.target.value);
               }}
+              autoComplete="off"
             />
           )}
         </FormControl>

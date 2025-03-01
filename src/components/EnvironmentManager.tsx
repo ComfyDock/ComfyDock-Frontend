@@ -90,6 +90,7 @@ export function EnvironmentManagerComponent() {
         <div className="flex flex-wrap gap-4 mb-4 md:mb-0">
           <CreateEnvironmentDialog
             userSettings={userSettings || undefined}
+            selectedFolderRef={selectedFolderRef}
             createEnvironmentHandler={createEnvironmentHandler}
             updateUserSettingsHandler={updateUserSettingsHandler}
           >
@@ -175,6 +176,7 @@ export function EnvironmentManagerComponent() {
             environment={env}
             environments={environments}
             folders={folders}
+            selectedFolderRef={selectedFolderRef}
             activatingEnvironment={activatingEnvironment}
             deletingEnvironment={deletingEnvironment}
             updateEnvironmentHandler={updateEnvironmentHandler}

@@ -28,6 +28,7 @@ import { ComfyUIVersionDialog } from "./ComfyUIInstallDialog";
 interface CreateEnvironmentDialogProps {
   children: React.ReactNode;
   userSettings?: UserSettings;
+  selectedFolderRef: React.MutableRefObject<string | undefined>;
   createEnvironmentHandler: (environment: EnvironmentInput) => Promise<void>;
   updateUserSettingsHandler: (userSettings: UserSettingsInput) => Promise<void>;
 }
@@ -35,6 +36,7 @@ interface CreateEnvironmentDialogProps {
 export default function CreateEnvironmentDialog({
   children,
   userSettings,
+  selectedFolderRef,
   createEnvironmentHandler,
   updateUserSettingsHandler,
 }: CreateEnvironmentDialogProps) {
@@ -64,7 +66,7 @@ export default function CreateEnvironmentDialog({
     continueCreateEnvironment,
     handleInstallFinished,
     handleEnvironmentTypeChange,
-  } = useEnvironmentCreation(formDefaults, createEnvironmentHandler, toast, updateUserSettingsHandler);
+  } = useEnvironmentCreation(formDefaults, selectedFolderRef, createEnvironmentHandler, toast, updateUserSettingsHandler);
 
   useEffect(() => {
     if (isOpen) {
