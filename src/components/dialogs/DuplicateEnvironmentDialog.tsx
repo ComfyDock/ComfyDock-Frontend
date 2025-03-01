@@ -12,6 +12,7 @@ import {
 interface DuplicateEnvironmentDialogProps {
   environment: Environment;
   userSettings?: UserSettings;
+  selectedFolderRef: React.MutableRefObject<string | undefined>;
   duplicateEnvironmentHandler: (id: string, environment: EnvironmentInput) => Promise<void>;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -20,6 +21,7 @@ interface DuplicateEnvironmentDialogProps {
 export default function DuplicateEnvironmentDialog({
   environment,
   userSettings,
+  selectedFolderRef,
   duplicateEnvironmentHandler,
   open,
   onOpenChange,
@@ -32,7 +34,7 @@ export default function DuplicateEnvironmentDialog({
     isLoading,
     handleSubmit,
     handleEnvironmentTypeChange
-  } = useEnvironmentDuplication(formDefaults, environment, duplicateEnvironmentHandler, onOpenChange, toast);
+  } = useEnvironmentDuplication(formDefaults, environment, selectedFolderRef, duplicateEnvironmentHandler, onOpenChange, toast);
 
   useEffect(() => {
     if (open) {

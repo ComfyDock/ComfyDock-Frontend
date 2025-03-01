@@ -20,8 +20,14 @@ export function useUserSettingsManager() {
 
   const updateUserSettingsHandler = async (settings: UserSettingsInput) => {
     try {
-      await updateUserSettings(settings);
-      setUserSettings(settings);
+      // Merge existing settings with new settings
+      const updatedSettings = {
+        ...userSettings,
+        ...settings
+      };
+      
+      await updateUserSettings(updatedSettings);
+      setUserSettings(updatedSettings);
     } catch (error) {
       console.error(error);
       throw error;

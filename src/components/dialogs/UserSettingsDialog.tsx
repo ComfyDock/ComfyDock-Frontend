@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -77,7 +77,7 @@ export default function UserSettingsDialog({
         const settings = await getUserSettings();
         console.log(`settings: ${JSON.stringify(settings)}`);
         form.reset(settings);
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error(error);
         toast({
           title: "Error",
@@ -103,11 +103,11 @@ export default function UserSettingsDialog({
         title: "Success",
         description: "User settings updated successfully",
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(error);
       toast({
         title: "Error",
-        description: error.message,
+        description: error instanceof Error ? error.message : "An unknown error occurred",
         variant: "destructive",
       });
     } finally {

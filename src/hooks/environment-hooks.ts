@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { 
@@ -9,7 +9,7 @@ import {
   Mount,
   Environment
 } from "@/types/Environment";
-import { UserSettings } from "@/types/UserSettings";
+import { UserSettings, UserSettingsInput } from "@/types/UserSettings";
 import { useComfyUIInstall } from "@/hooks/use-comfyui-install";
 import { 
   checkImageExists, 
@@ -39,8 +39,10 @@ export const useFormDefaults = (userSettings?: UserSettings) => {
 
 export const useEnvironmentCreation = (
   defaultValues: EnvironmentFormValues,
+  selectedFolderRef: React.MutableRefObject<string | undefined>,
   createHandler: (env: EnvironmentInput) => Promise<void>,
-  toast: ReturnType<typeof useToast>['toast']
+  toast: ReturnType<typeof useToast>['toast'],
+  updateUserSettingsHandler: (userSettings: UserSettingsInput) => Promise<void>
 ) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -57,8 +59,12 @@ export const useEnvironmentCreation = (
     installComfyUIDialog, 
     setInstallComfyUIDialog,
     isInstalling,
-    handleInstallComfyUI
-  } = useComfyUIInstall(form, toast, async (updatedComfyUIPath: string, updatedMountConfig: Mount[]) => {
+    handleInstallComfyUI,
+    showSettingsPrompt,
+    installedPath,
+    handleUpdateUserSettings,
+    handleCancelSettingsUpdate
+  } = useComfyUIInstall(form, toast, updateUserSettingsHandler, async (updatedComfyUIPath: string, updatedMountConfig: Mount[]) => {
     if (!pendingEnvironment) throw new Error("No pending environment");
     form.setValue("comfyUIPath", updatedComfyUIPath);
     form.setValue("mountConfig", updatedMountConfig)
@@ -81,6 +87,9 @@ export const useEnvironmentCreation = (
 
   const createEnvironment = useCallback(async (env: EnvironmentInput | null) => {
     if (!env) return;
+
+    // Update the environment with the selected folder
+    env.folderIds = [selectedFolderRef.current || ""];
     
     try {
       await createHandler(env);
@@ -110,7 +119,11 @@ export const useEnvironmentCreation = (
       let pathValid = false;
       try {
         if (installComfyUI) {
-          pathValid = await checkValidComfyUIPath(env.comfyui_path || "");
+          try {
+            pathValid = await checkValidComfyUIPath(env.comfyui_path || "");
+          } catch (error: unknown) {
+            console.error(error);
+          }
         }
         imageExists = await checkImageExists(env.image);
       } catch (error: unknown) {
@@ -180,6 +193,8 @@ export const useEnvironmentCreation = (
     pullImageDialog,
     installComfyUIDialog,
     isInstalling,
+    showSettingsPrompt,
+    installedPath,
     setInstallComfyUIDialog,
     setIsOpen,
     setIsLoading,
@@ -187,10 +202,11 @@ export const useEnvironmentCreation = (
     setPullImageDialog,
     handleSubmit,
     handleInstallComfyUI,
+    handleUpdateUserSettings,
+    handleCancelSettingsUpdate,
     continueCreateEnvironment,
     handleInstallFinished: createEnvironment,
     handleEnvironmentTypeChange
-
   };
 };
 
@@ -220,6 +236,7 @@ export const useDuplicateFormDefaults = (
 export const useEnvironmentDuplication = (
   defaultValues: EnvironmentFormValues,
   environment: Environment,
+  selectedFolderRef: React.MutableRefObject<string | undefined>,
   duplicateHandler: (id: string, env: EnvironmentInput) => Promise<void>,
   setIsOpen: (open: boolean) => void,
   toast: ReturnType<typeof useToast>['toast']
@@ -236,7 +253,9 @@ export const useEnvironmentDuplication = (
     console.log(`createEnvironment called with env: ${JSON.stringify(env)}`)
     if (!env) return;
     console.log(`creating environment with values: ${JSON.stringify(env)}`)
-    
+    // Update the environment with the selected folder
+    env.folderIds = [selectedFolderRef.current || ""];
+    console.log(`updated environment with folderId: ${JSON.stringify(env)}`)
     try {
       await duplicateHandler(environment.id || "", env);
       setIsOpen(false);

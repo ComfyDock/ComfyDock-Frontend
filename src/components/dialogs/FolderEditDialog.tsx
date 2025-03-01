@@ -76,7 +76,7 @@ export function FolderEditDialog({ folder, open, onOpenChange, onUpdate, onDelet
                 <FormItem>
                   <FormLabel>Folder Name</FormLabel>
                   <FormControl>
-                    <Input {...field} autoFocus={false}/>
+                    <Input {...field} autoFocus={false} autoComplete="off"/>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
