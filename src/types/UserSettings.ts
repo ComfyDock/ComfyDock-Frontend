@@ -16,6 +16,7 @@ export type UserSettings = {
   command?: string
   folders?: Folder[]
   max_deleted_environments?: number
+  last_used_image?: string
 }
 
 
@@ -25,5 +26,6 @@ export type UserSettingsInput = {
   port?: number
   command?: string
   folders?: Folder[]
-  max_deleted_environments?: number
+  max_deleted_environments?: number 
+  last_used_image?: string
 }

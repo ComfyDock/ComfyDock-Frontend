@@ -20,6 +20,7 @@ interface SelectFormFieldProps {
   options: string[];
   placeholder: string;
   className?: string;
+  onSelect?: () => void;
 }
 
 export const SelectFormField = ({
@@ -28,6 +29,7 @@ export const SelectFormField = ({
   options,
   placeholder,
   className = "grid grid-cols-4 items-center gap-4",
+  onSelect,
 }: SelectFormFieldProps) => {
   const { control } = useFormContext();
   return (
@@ -40,6 +42,7 @@ export const SelectFormField = ({
           <Select
             onValueChange={field.onChange}
             defaultValue={field.value}
+            onOpenChange={onSelect}
           >
             <FormControl className="col-span-3">
               <SelectTrigger>

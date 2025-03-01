@@ -32,7 +32,6 @@ export default function ImagePullDialog({ image, open, onOpenChange, onSuccess }
     try {
       setStatusText("Downloading image layers")
       await pullImageStream(image, (progress) => {
-        console.log(progress)
         setProgress(progress)
       })
       setStatusText("Download complete")

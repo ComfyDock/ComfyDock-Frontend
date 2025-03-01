@@ -1,15 +1,30 @@
-import { useEffect } from "react";
-import { Dialog, DialogContent, DialogTitle, DialogHeader, DialogTrigger } from "@/components/ui/dialog";
+import React from "react";
+import { useEffect, useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogHeader,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { EnvironmentForm } from "@/components/form/EnvironmentForm";
 import { useToast } from "@/hooks/use-toast";
-import { EnvironmentInput, EnvironmentTypeDescriptions, EnvironmentTypeEnum } from "@/types/Environment";
+import {
+  EnvironmentInput,
+  EnvironmentTypeDescriptions,
+  EnvironmentTypeEnum,
+} from "@/types/Environment";
 import { UserSettings } from "@/types/UserSettings";
-import { CustomAlertDialog } from "@/components/dialogs/CustomAlertDialog";
 import ImagePullDialog from "@/components/dialogs/PullImageDialog";
-import { SelectFormField } from "@/components/form/SelectFormField";
-import FormFieldComponent from "@/components/form/FormFieldComponent";
-import { useComfyUIReleases } from "@/hooks/use-comfyui-releases";
-import { useEnvironmentCreation, useFormDefaults } from "@/hooks/environment-hooks";
+import {
+  useEnvironmentCreation,
+  useFormDefaults,
+} from "@/hooks/environment-hooks";
+import { DockerImageSelector } from "../DockerImageSelector";
+import { DockerImageSelectFormField } from "../form/DockerImageSelectFormField";
+import { ComfyUIVersionDialog } from "./ComfyUIInstallDialog";
+import { Button } from "../ui/button";
 
 interface CreateEnvironmentDialogProps {
   children: React.ReactNode;
@@ -17,15 +32,34 @@ interface CreateEnvironmentDialogProps {
   createEnvironmentHandler: (environment: EnvironmentInput) => Promise<void>;
 }
 
+const MOCK_INSTALLED_IMAGES = [
+  "akatzai/comfydock-env:v0.3.15-py3.12-cuda12.1-ptstable",
+  "akatzai/comfydock-env:v0.3.15-py3.11-cuda12.1-ptstable",
+  "akatzai/comfydock-env:v0.3.15-py3.10-cuda12.1-ptstable",
+  "akatzai/comfydock-env:v0.3.15-py3.9-cuda12.1-ptstable",
+  "akatzai/comfydock-env:v0.3.15-py3.8-cuda12.1-ptstable",
+  "akatzai/comfydock-env:v0.3.15-py3.7-cuda12.1-ptstable",
+  "akatzai/comfydock-env:v0.3.15-py3.6-cuda12.1-ptstable",
+  "akatzai/comfydock-env:v0.3.15-py3.5-cuda12.1-ptstable",
+  "akatzai/comfydock-env:v0.3.15-py3.4-cuda12.1-ptstable",
+  "akatzai/comfydock-env:v0.3.15-py3.3-cuda12.1-ptstable",
+  "akatzai/comfydock-env:v0.3.15-py3.2-cuda12.1-ptstable",
+  "akatzai/comfydock-env:v0.3.15-py3.1-cuda12.1-ptstable",
+  "akatzai/comfydock-env:v0.3.15-py3.0-cuda12.1-ptstable",
+  "akatzai/comfydock-env:v0.3.15-py2.7-cuda12.1-ptstable",
+  "akatzai/comfydock-env:v0.3.15-py2.6-cuda12.1-ptstable",
+  "akatzai/comfydock-env:v0.3.15-py2.5-cuda12.1-ptstable",
+];
+
 export default function CreateEnvironmentDialog({
   children,
   userSettings,
   createEnvironmentHandler,
 }: CreateEnvironmentDialogProps) {
   const { toast } = useToast();
-  const { releaseOptions } = useComfyUIReleases();
   const formDefaults = useFormDefaults(userSettings);
-  
+  const [dockerSelectorOpen, setDockerSelectorOpen] = useState(false);
+
   const {
     form,
     isOpen,
@@ -43,48 +77,56 @@ export default function CreateEnvironmentDialog({
     handleInstallComfyUI,
     continueCreateEnvironment,
     handleInstallFinished,
-    handleEnvironmentTypeChange
-
-
-  } = useEnvironmentCreation(formDefaults, releaseOptions, createEnvironmentHandler, toast);
+    handleEnvironmentTypeChange,
+  } = useEnvironmentCreation(
+    formDefaults,
+    createEnvironmentHandler,
+    toast
+  );
 
   useEffect(() => {
     if (isOpen) {
-      form.reset(formDefaults)
+      form.reset(formDefaults);
     }
-  }, [formDefaults, isOpen])
+  }, [formDefaults, isOpen]);
+
+  const handleImageSelect = (image: string) => {
+    console.log("handleImageSelect", image);
+    form.setValue("image", image);
+  };
 
   // Filter out the Auto option from the environment type options
-  const filteredEnvironmentTypeOptions: Record<string, string> = Object.values(EnvironmentTypeEnum)
-  .filter((type) => type !== EnvironmentTypeEnum.Auto)
-  .reduce((acc, type) => {
-    acc[type] = type;
-    return acc;
-  }, {} as Record<string, string>);
+  const filteredEnvironmentTypeOptions: Record<string, string> = Object.values(
+    EnvironmentTypeEnum
+  )
+    .filter((type) => type !== EnvironmentTypeEnum.Auto)
+    .reduce((acc, type) => {
+      acc[type] = type;
+      return acc;
+    }, {} as Record<string, string>);
 
   return (
     <>
-      <CustomAlertDialog
+      <ComfyUIVersionDialog
         open={installComfyUIDialog}
         title="Could not find valid ComfyUI installation"
         description="We could not find a valid ComfyUI installation at the path you provided. Should we try to install ComfyUI automatically?"
         cancelText="No"
         actionText="Yes"
         alternateActionText="Proceed without ComfyUI"
-        onAction={handleInstallComfyUI}
+        onAction={(version) => handleInstallComfyUI(version)}
         onCancel={() => {
-          console.log("onCancel")
+          console.log("onCancel");
           setInstallComfyUIDialog(false);
           setIsLoading(false);
         }}
         onAlternateAction={() => {
-          console.log("onAlternateAction")
+          console.log("onAlternateAction");
           setInstallComfyUIDialog(false);
           continueCreateEnvironment(pendingEnvironment, false);
           setIsLoading(false);
         }}
         variant="default"
-
         loading={isInstalling}
       />
 
@@ -105,10 +147,12 @@ export default function CreateEnvironmentDialog({
         }}
       />
 
-
-      <Dialog open={isOpen} onOpenChange={installComfyUIDialog ? undefined : setIsOpen}>
+      <Dialog
+        open={isOpen}
+        onOpenChange={installComfyUIDialog ? undefined : setIsOpen}
+      >
         <DialogTrigger asChild>{children}</DialogTrigger>
-        <DialogContent className="max-h-[80vh] min-w-[600px] overflow-y-auto dialog-content">
+        <DialogContent className="max-h-[80vh] min-w-[600px] overflow-y-auto [scrollbar-gutter:stable] dialog-content">
           <DialogHeader>
             <DialogTitle>Create New Environment</DialogTitle>
           </DialogHeader>
@@ -121,21 +165,21 @@ export default function CreateEnvironmentDialog({
             environmentTypeDescriptions={EnvironmentTypeDescriptions}
             handleEnvironmentTypeChange={handleEnvironmentTypeChange}
           >
-            <SelectFormField
-              name="release"
-              label="ComfyUI Release"
-              options={releaseOptions}
-              placeholder="Select a release"
-            />
-            
-            <FormFieldComponent
+            <DockerImageSelectFormField
               name="image"
-              label="Custom Docker Image"
-              placeholder="Optional: DockerHub image URL"
+              label="Docker Image"
+              placeholder="Select a Docker image"
+              onOpenDialog={() => setDockerSelectorOpen(true)}
             />
           </EnvironmentForm>
         </DialogContent>
       </Dialog>
+
+      <DockerImageSelector
+        onSelect={handleImageSelect}
+        open={dockerSelectorOpen}
+        onOpenChange={setDockerSelectorOpen}
+      />
     </>
   );
 }

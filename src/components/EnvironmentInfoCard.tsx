@@ -13,7 +13,7 @@ import {
   Network,
   HardDrive,
 } from "lucide-react";
-import { Environment, MountConfig } from "@/types/Environment";
+import { Environment, Mount, MountConfig } from "@/types/Environment";
 
 function InfoItem({
   icon,
@@ -34,7 +34,7 @@ function InfoItem({
   );
 }
 
-function isNewMountConfigStyle(mountConfig: any): boolean {
+function isNewMountConfigStyle(mountConfig: MountConfig): boolean {
   return Array.isArray(mountConfig?.mounts);
 }
 
@@ -103,11 +103,6 @@ export const EnvironmentInfoCard: React.FC<EnvironmentInfoCardProps> = ({
             value={environment.command || "N/A"}
           />
           <InfoItem
-            icon={<Tag className="h-4 w-4" />}
-            label="ComfyUI Release"
-            value={environment.options?.["comfyui_release"] as string}
-          />
-          <InfoItem
             icon={<Network className="h-4 w-4" />}
             label="Port"
             value={environment.options?.["port"] as string}
@@ -118,9 +113,9 @@ export const EnvironmentInfoCard: React.FC<EnvironmentInfoCardProps> = ({
             <HardDrive className="h-4 w-4 mr-2" />
             Mount Config
           </h4>
-          {isNewMountConfigStyle(mountConfig) ? (
+          {mountConfig && isNewMountConfigStyle(mountConfig) ? (
             <ul className="grid grid-cols-1 gap-2">
-              {mountConfig?.mounts.map((mount: any, index: number) => (
+              {mountConfig?.mounts.map((mount: Mount, index: number) => (
                 <li key={index} className="text-sm">
                   <span className="font-medium">Container Path:</span>{" "}
                   {mount.container_path}
