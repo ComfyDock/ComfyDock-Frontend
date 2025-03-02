@@ -109,7 +109,7 @@ export function EnvironmentManagerComponent() {
 
         <div className="flex flex-wrap gap-4 mb-4 md:mb-0">
           <a
-            href={`https://cyber-damselfly-b6c.notion.site/ComfyUI-Environment-Manager-14ffd5b1ca3b804abafbdb4bd6b8068e`}
+            href={`https://comfydock.com`}
             target="_blank"
             rel="noopener noreferrer"
           >
