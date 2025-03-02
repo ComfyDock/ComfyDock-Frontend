@@ -3,7 +3,7 @@ import { Folder, UserSettingsInput } from '@/types/UserSettings';
 import { Environment, EnvironmentInput, EnvironmentUpdate } from '../types/Environment';
 import { ImageTag, InstalledImage } from '@/types/Images';
 
-const API_BASE_URL = 'http://localhost:5172'; // TODO: put in .env
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5172';
 
 export async function fetchEnvironments(folderId?: string) {
   const response = await fetch(`${API_BASE_URL}/environments${folderId ? `?folderId=${folderId}` : ''}`);
