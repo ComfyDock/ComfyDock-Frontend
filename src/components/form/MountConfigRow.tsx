@@ -13,6 +13,7 @@ import { FormField, FormControl, FormItem } from "@/components/ui/form";
 import { CONTAINER_COMFYUI_PATH } from "@/components/utils/MountConfigUtils";
 import { useFormContext, useWatch } from "react-hook-form";
 import { joinPaths } from "@/components/utils/PathUtils";
+import { useState, useEffect, useRef } from "react";
 
 interface MountConfigRowProps {
   index: number;
@@ -26,15 +27,33 @@ const MountConfigRow = ({
   onActionChange,
 }: MountConfigRowProps) => {
   const { control, setValue } = useFormContext();
+  const [isCustomPath, setIsCustomPath] = useState(false);
+  const customWasSelected = useRef(false);
   const override = useWatch({
     control,
     name: `mountConfig.${index}.override`,
+  });
+  const containerPath = useWatch({
+    control,
+    name: `mountConfig.${index}.container_path`,
   });
   const comfyUIPath = useWatch({
     control,
     name: "comfyUIPath",
   });
+
   const handleContainerPathChange = (value: string) => {
+    if (value === "custom") {
+      // Immediately set to custom path mode
+      setIsCustomPath(true);
+      // Remember that custom was explicitly selected
+      customWasSelected.current = true;
+      // Clear the value to avoid saving "custom" as the actual path
+      setValue(`mountConfig.${index}.container_path`, "");
+      onActionChange();
+      return;
+    }
+
     setValue(`mountConfig.${index}.container_path`, value);
 
     if (!override) {
@@ -44,6 +63,24 @@ const MountConfigRow = ({
     }
     onActionChange();
   };
+
+  // Only set isCustomPath based on path if custom wasn't explicitly selected
+  useEffect(() => {
+    // If custom was explicitly selected, don't change the state back
+    if (customWasSelected.current) {
+      return;
+    }
+    
+    const predefinedPaths = [
+      `${CONTAINER_COMFYUI_PATH}/models`,
+      `${CONTAINER_COMFYUI_PATH}/output`,
+      `${CONTAINER_COMFYUI_PATH}/input`,
+      `${CONTAINER_COMFYUI_PATH}/user`,
+      `${CONTAINER_COMFYUI_PATH}/custom_nodes`,
+    ];
+    setIsCustomPath(containerPath !== "" && !predefinedPaths.includes(containerPath));
+  }, [containerPath]);
+
   return (
     <div className="flex items-center space-x-2 mb-2">
       <div className="w-40">
@@ -107,43 +144,74 @@ const MountConfigRow = ({
           name={`mountConfig.${index}.container_path`}
           render={({ field }) => (
             <FormItem>
-              <Select
-                onValueChange={handleContainerPathChange}
-                value={field.value}
-              >
+              {isCustomPath ? (
                 <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select Path" />
-                  </SelectTrigger>
+                  <Input
+                    {...field}
+                    placeholder="Container Path"
+                    onChange={(e) => {
+                      field.onChange(e);
+                      onActionChange();
+                      
+                      // Update host path if override is disabled
+                      if (!override) {
+                        const containerDir = e.target.value.split('/').pop() || '';
+                        const newHostPath = joinPaths(comfyUIPath, containerDir);
+                        setValue(`mountConfig.${index}.host_path`, newHostPath);
+                      }
+                    }}
+                  />
                 </FormControl>
-                <SelectContent>
-                  <SelectItem value={`${CONTAINER_COMFYUI_PATH}/models`}>
-                    Models
-                  </SelectItem>
-                  <SelectItem value={`${CONTAINER_COMFYUI_PATH}/output`}>
-                    Output
-                  </SelectItem>
-                  <SelectItem value={`${CONTAINER_COMFYUI_PATH}/input`}>
-                    Input
-                  </SelectItem>
-                  <SelectItem value={`${CONTAINER_COMFYUI_PATH}/user`}>
-                    User
-                  </SelectItem>
-                  <SelectItem value={`${CONTAINER_COMFYUI_PATH}/custom_nodes`}>
-                    Custom Nodes
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-              {/* <FormControl>
-              <Input
-                {...field}
-                placeholder="Container Path"
-                onChange={(e) => {
-                  field.onChange(e);
-                  onActionChange();
-                }}
-              />
-            </FormControl> */}
+              ) : (
+                <Select
+                  onValueChange={handleContainerPathChange}
+                  value={field.value}
+                >
+                  <FormControl>
+                    <SelectTrigger className="cursor-pointer">
+                      <SelectValue placeholder="Select Path" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem 
+                      value={`${CONTAINER_COMFYUI_PATH}/models`}
+                      className="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
+                    >
+                      Models
+                    </SelectItem>
+                    <SelectItem 
+                      value={`${CONTAINER_COMFYUI_PATH}/output`}
+                      className="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
+                    >
+                      Output
+                    </SelectItem>
+                    <SelectItem 
+                      value={`${CONTAINER_COMFYUI_PATH}/input`}
+                      className="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
+                    >
+                      Input
+                    </SelectItem>
+                    <SelectItem 
+                      value={`${CONTAINER_COMFYUI_PATH}/user`}
+                      className="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
+                    >
+                      User
+                    </SelectItem>
+                    <SelectItem 
+                      value={`${CONTAINER_COMFYUI_PATH}/custom_nodes`}
+                      className="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
+                    >
+                      Custom Nodes
+                    </SelectItem>
+                    <SelectItem 
+                      value="custom"
+                      className="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
+                    >
+                      Custom...
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
             </FormItem>
           )}
         />
