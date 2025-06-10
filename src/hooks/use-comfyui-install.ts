@@ -19,13 +19,13 @@ export const useComfyUIInstall = (
 
   const handleInstallComfyUI = async (branch: string) => {
     try {
-      const comfyUIPath = form.getValues("comfyUIPath");
+      const comfyUIPath = form.getValues("comfyui_path");
       
       setIsInstalling(true);
       await tryInstallComfyUI(comfyUIPath, branch);
 
       const updatedPath = updateComfyUIPath(comfyUIPath);
-      form.setValue("comfyUIPath", updatedPath);
+      form.setValue("comfyui_path", updatedPath);
 
       const finalMounts = updateMountConfigs(updatedPath);
       
@@ -45,8 +45,8 @@ export const useComfyUIInstall = (
   };
 
   const updateMountConfigs = (comfyUIPath: string): Mount[] => {
-    const currentType = form.getValues("environmentType");
-    const updatedMounts = form.getValues("mountConfig").map((config: Mount) => {
+    const currentType = form.getValues("environment_type");
+    const updatedMounts = form.getValues("mount_config.mounts").map((config: Mount) => {
       if (!config.override) {
         const dir = config.container_path.split('/').pop();
         return { ...config, host_path: joinPaths(comfyUIPath, dir || '') };
@@ -56,7 +56,7 @@ export const useComfyUIInstall = (
     
     const finalMounts = currentType === 'Custom' ? updatedMounts : 
       getDefaultMountConfigsForEnvType(currentType, comfyUIPath);
-    form.setValue("mountConfig", finalMounts || []);
+    form.setValue("mount_config.mounts", finalMounts || []);
     return finalMounts || [];
   };
 

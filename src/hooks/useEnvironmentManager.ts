@@ -60,10 +60,10 @@ export function useEnvironmentManager() {
       setActivatingEnvironment(id);
       await activateEnvironment(id);
       await updateEnvironments(selectedFolderRef.current);
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Error",
-        description: `Failed to activate environment: ${error.message}`,
+        description: `Failed to activate environment: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: "destructive",
       });
     } finally {
@@ -76,10 +76,10 @@ export function useEnvironmentManager() {
       setActivatingEnvironment(id);
       await deactivateEnvironment(id);
       await updateEnvironments(selectedFolderRef.current);
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Error",
-        description: `Failed to deactivate environment: ${error.message}`,
+        description: `Failed to deactivate environment: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: "destructive",
       });
     } finally {
@@ -92,10 +92,10 @@ export function useEnvironmentManager() {
       setDeletingEnvironment(id);
       await deleteEnvironment(id);
       await updateEnvironments(selectedFolderRef.current);
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Error",
-        description: `Failed to delete environment: ${error.message}`,
+        description: `Failed to delete environment: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: "destructive",
       });
     } finally {

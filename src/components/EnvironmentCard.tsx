@@ -28,6 +28,7 @@ import { CustomAlertDialog } from "./dialogs/CustomAlertDialog";
 import { StatusBadge } from "./atoms/StatusBadge";
 import { ToolTip } from "./atoms/Tooltip";
 import { Folder } from "@/types/UserSettings";
+import React from "react";
 
 type EnvironmentCardProps = {
   environment: Environment;
@@ -79,6 +80,9 @@ export default function EnvironmentCard({
     return activateEnvironmentHandler(environmentId);
   };
 
+  // Get the url from the environment options, otherwise use the port and localhost
+  const comfyuiUrl = environment.options?.["url"] as string ?? `http://localhost:${port ?? 8188}`;
+
   return (
     <Card
       key={environment.id}
@@ -94,15 +98,15 @@ export default function EnvironmentCard({
 
         {/* Top Right Status & Link */}
         <div className="absolute top-2 right-2 flex items-center space-x-4">
-          {isRunning && port && (
+          {isRunning && comfyuiUrl && (
             <a
-              href={`http://localhost:${port}`}
+              href={comfyuiUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="text-sm text-slate-600 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 flex items-center"
             >
               <ExternalLink className="w-4 h-4 mr-1" />
-              localhost:{port}
+              {comfyuiUrl}
             </a>
           )}
           <StatusBadge status={environment.status || "Unknown"} className="my-2" />

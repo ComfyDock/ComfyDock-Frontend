@@ -94,13 +94,13 @@ export default function SettingsEnvironmentDialog({
         description: "Environment updated successfully",
         duration: SUCCESS_TOAST_DURATION,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(error);
       toast({
         title: "Error",
-        description: error.message,
+        description: error instanceof Error ? error.message : "An unknown error occurred",
         variant: "destructive",
-      });
+      }); 
     } finally {
       setIsLoading(false);
     }

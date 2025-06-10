@@ -8,6 +8,7 @@ import {
   useDuplicateFormDefaults,
   useEnvironmentDuplication
 } from "@/hooks/environment-hooks";
+import React from "react";
 
 interface DuplicateEnvironmentDialogProps {
   environment: Environment;
