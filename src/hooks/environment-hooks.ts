@@ -10,6 +10,7 @@ import {
   Environment,
   formToInput,
   DEFAULT_OPTIONS,             // <- NEW
+  createFormDefaults,
 } from "@/types/Environment";
 import { UserSettings, UserSettingsInput } from "@/types/UserSettings";
 import { useComfyUIInstall } from "@/hooks/use-comfyui-install";
@@ -27,34 +28,37 @@ const DEFAULT_COMFYUI_PATH = import.meta.env.VITE_DEFAULT_COMFYUI_PATH;
 const SUCCESS_TOAST_DURATION = 2000;
 
 /* ------------------------------------------------------------------ *
+ *  HELPER FUNCTIONS
+ * ------------------------------------------------------------------ */
+const getDefaultValue = <T>(
+  userSettings: UserSettings | undefined,
+  field: keyof UserSettings,
+  defaultOptions: Record<string, T>,
+  defaultOptionsField?: string
+): T | undefined => {
+  // Try userSettings first
+  if (userSettings && field in userSettings) {
+    const value = userSettings[field];
+    if (value !== undefined && value !== "") {
+      return value as T;
+    }
+  }
+  
+  // Then try DEFAULT_OPTIONS
+  const optionsField = defaultOptionsField || field;
+  if (optionsField in defaultOptions) {
+    return defaultOptions[optionsField];
+  }
+  
+  // Finally return undefined
+  return undefined;
+};
+
+/* ------------------------------------------------------------------ *
  *  DEFAULTS FOR "CREATE" FORM
  * ------------------------------------------------------------------ */
 export const useFormDefaults = (userSettings?: UserSettings): EnvironmentFormValues =>
-  useMemo(
-    () => ({
-      // Core fields
-      name: "",
-      image: "",
-      comfyui_path: userSettings?.comfyui_path || DEFAULT_COMFYUI_PATH || "",
-      environment_type: EnvironmentTypeEnum.Default,
-      command: userSettings?.command || "",
-      folderIds: undefined,
-
-      // Options fields
-      port: String(userSettings?.port) || DEFAULT_OPTIONS.port,
-      runtime: userSettings?.runtime || DEFAULT_OPTIONS.runtime,
-      url: DEFAULT_OPTIONS.url,
-      mount_config: {
-        mounts: getDefaultMountConfigsForEnvType(
-          EnvironmentTypeEnum.Default,
-          userSettings?.comfyui_path || DEFAULT_COMFYUI_PATH || "",
-        ) as Mount[],
-      },
-      entrypoint: undefined,
-      environment_variables: undefined,
-    }),
-    [userSettings],
-  );
+  useMemo(() => createFormDefaults({ userSettings }), [userSettings]);
 
 /* ------------------------------------------------------------------ *
  *  CREATE ENVIRONMENT HOOK
@@ -210,14 +214,12 @@ export const useEnvironmentCreation = (
 
   /* ---------------- quick switch for predefined configs ---------------- */
   const handleEnvironmentTypeChange = (newType: EnvironmentTypeEnum) => {
-    console.log(`handleEnvironmentTypeChange: ${newType}`);
     form.setValue("environment_type", newType);
     const comfyUIPath = form.getValues("comfyui_path");
     const standardConfig = getDefaultMountConfigsForEnvType(
       newType,
       comfyUIPath,
     );
-    console.log(`standardConfig: ${JSON.stringify(standardConfig)}`);
     form.setValue("mount_config.mounts", standardConfig as Mount[]);
   };
 
@@ -250,35 +252,9 @@ export const useEnvironmentCreation = (
  *  DEFAULTS FOR "DUPLICATE" FORM
  * ------------------------------------------------------------------ */
 export const useDuplicateFormDefaults = (
-  environment: Environment,
-  userSettings?: UserSettings,
+  environment: Environment
 ): EnvironmentFormValues =>
-  useMemo(() => {
-    const existingMounts = parseExistingMountConfig(
-      environment.options?.["mount_config"],
-      environment.comfyui_path || "",
-    );
-
-    return {
-      // Core fields
-      name: `${environment.name}-copy`,
-      image: (environment.metadata?.["base_image"] as string) ?? environment.image ?? "",
-      comfyui_path: environment.comfyui_path || userSettings?.comfyui_path || DEFAULT_COMFYUI_PATH || "",
-      environment_type: EnvironmentTypeEnum.Auto,
-      command: environment.command || userSettings?.command || "",
-      folderIds: undefined,
-
-      // Options fields
-      port: (environment.options?.["port"] as string) || DEFAULT_OPTIONS.port,
-      runtime: (environment.options?.["runtime"] as "nvidia" | "none") || DEFAULT_OPTIONS.runtime,
-      url: environment.options?.["url"] as string || DEFAULT_OPTIONS.url,
-      mount_config: {
-        mounts: existingMounts as Mount[],
-      },
-      entrypoint: environment.options?.["entrypoint"] as string || undefined,
-      environment_variables: environment.options?.["environment_variables"] as string || undefined,
-    };
-  }, [environment, userSettings]);
+  useMemo(() => createFormDefaults({ environment }), [environment]);
 
 /* ------------------------------------------------------------------ *
  *  DUPLICATE HOOK
@@ -334,7 +310,6 @@ export const useEnvironmentDuplication = (
         setIsLoading(true);
 
         const newEnvironment = formToInput(values);
-        console.log(`newEnvironment: ${JSON.stringify(newEnvironment)}`);
 
         await createEnvironment(newEnvironment);
       } catch (error) {

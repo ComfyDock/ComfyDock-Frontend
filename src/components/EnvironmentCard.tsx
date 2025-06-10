@@ -27,12 +27,12 @@ import DuplicateEnvironmentDialog from "./dialogs/DuplicateEnvironmentDialog";
 import { CustomAlertDialog } from "./dialogs/CustomAlertDialog";
 import { StatusBadge } from "./atoms/StatusBadge";
 import { ToolTip } from "./atoms/Tooltip";
-import { Folder } from "@/types/UserSettings";
+import { Folder, UserSettings } from "@/types/UserSettings";
 import React from "react";
 
 type EnvironmentCardProps = {
   environment: Environment;
-  environments: Environment[];
+  userSettings: UserSettings;
   folders: Folder[];
   selectedFolderRef: React.MutableRefObject<string | undefined>;
   activatingEnvironment: string | null;
@@ -40,13 +40,13 @@ type EnvironmentCardProps = {
   updateEnvironmentHandler: (id: string, name: string, folderIds?: string[]) => Promise<void>;
   duplicateEnvironmentHandler: (id: string, environment: EnvironmentInput) => Promise<void>;
   deleteEnvironmentHandler: (id: string) => Promise<void>;
-  activateEnvironmentHandler: (id: string) => Promise<void>;
+  activateEnvironmentHandler: (id: string, allow_multiple: boolean) => Promise<void>;
   deactivateEnvironmentHandler: (id: string) => Promise<void>;
 };
 
 export default function EnvironmentCard({
   environment,
-  environments,
+  userSettings,
   folders,
   selectedFolderRef,
   activatingEnvironment,
@@ -65,39 +65,38 @@ export default function EnvironmentCard({
   const isDeleting = deletingEnvironment === environment.id;
   const isRunning = environment.status === "running";
   const isActivating = activatingEnvironment === environment.id;
-  const port = environment.options?.["port"] as number | undefined;
+  const port = environment.options?.["port"] as string | number | undefined;
   const baseImage = environment.metadata?.["base_image"] as string;
   const environmentId = environment.id || "";
   const deleteDescription =
     environment.folderIds?.[0] === "deleted"
       ? `This action cannot be undone. This will permanently delete your environment.`
       : `This will move your environment to the "Recently Deleted" folder.`;
+  // Get the url from the environment options, otherwise use the port and localhost
+  const comfyuiUrl = environment.options?.["url"] as string ?? `http://localhost:${port ?? 8188}`;
 
   const handleActivateDeactivate = () => {
     if (isRunning) {
       return deactivateEnvironmentHandler(environmentId);
     }
-    return activateEnvironmentHandler(environmentId);
+    return activateEnvironmentHandler(environmentId, userSettings?.allow_multiple || false);
   };
-
-  // Get the url from the environment options, otherwise use the port and localhost
-  const comfyuiUrl = environment.options?.["url"] as string ?? `http://localhost:${port ?? 8188}`;
 
   return (
     <Card
       key={environment.id}
-      className={`relative ${isRunning ? "ring-2 ring-slate-500" : ""}`}
+      className={`relative flex flex-col h-full ${isRunning ? "ring-2 ring-slate-500" : ""}`}
     >
-      <div className="relative">
+      <div className="relative flex flex-col flex-1">
         {isDeleting && (
-          <div className="absolute top-0 left-0 w-full h-full bg-zinc-200/50 backdrop-blur-sm flex items-center justify-center">
+          <div className="absolute top-0 left-0 w-full h-full bg-zinc-200/50 backdrop-blur-sm flex items-center justify-center z-10">
             <Loader2 className="w-6 h-6 text-zinc-900 dark:text-zinc-50 animate-spin mr-2" />
             Deleting...
           </div>
         )}
 
         {/* Top Right Status & Link */}
-        <div className="absolute top-2 right-2 flex items-center space-x-4">
+        <div className="absolute top-2 right-2 flex items-center space-x-4 z-10">
           {isRunning && comfyuiUrl && (
             <a
               href={comfyuiUrl}
@@ -118,15 +117,15 @@ export default function EnvironmentCard({
           </div>
         )}
 
-        {/* Card Content */}
-        <CardContent className="pt-6">
+        {/* Card Content - flex-1 to take remaining space */}
+        <CardContent className="pt-6 flex-1">
           <div className="text-4xl mb-2">🖥️</div>
           <h3 className="text-lg font-semibold">{environment.name}</h3>
           <p className="text-sm text-zinc-500 dark:text-zinc-400">{baseImage}</p>
         </CardContent>
 
-        {/* Card Footer (Actions) */}
-        <CardFooter className="flex flex-wrap justify-between">
+        {/* Card Footer (Actions) - removed from flex-1 wrapper */}
+        <CardFooter className="flex flex-wrap justify-between mt-auto">
           <div className="flex gap-2">
             <SettingsEnvironmentDialog
               environment={environment}

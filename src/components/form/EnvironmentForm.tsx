@@ -61,8 +61,8 @@ export function EnvironmentForm({
   submitButtonText = "Create",
   children,
 }: EnvironmentFormProps) {
-  // Form Fields
-  const { fields, append, remove } = useFieldArray({
+  // Mount Config Form Fields
+  const { fields: mountFields, append, remove } = useFieldArray({
     control: form.control,
     name: "mount_config.mounts",
   });
@@ -107,9 +107,6 @@ export function EnvironmentForm({
         );
         if (newMountConfig) {
           form.setValue("mount_config.mounts", newMountConfig as Mount[]);
-          console.log(`newMountConfig: ${JSON.stringify(newMountConfig)}`);
-          console.log(`form.getValues("mount_config.mounts"): ${JSON.stringify(form.getValues("mount_config.mounts"))}`);
-          console.log(`fields: ${JSON.stringify(fields)}`);
         }
       }
     }, 300); // 300ms debounce
@@ -201,7 +198,7 @@ export function EnvironmentForm({
                         <div className="w-full">Action</div>
                       </div>
                       <div className="max-h-[300px] overflow-y-auto pr-2">
-                        {fields.map((field, index) => (
+                        {mountFields.map((field, index) => (
                           <MountConfigRow
                             key={field.id}
                             index={index}
@@ -257,12 +254,6 @@ export function EnvironmentForm({
                     className="col-span-3"
                   />
                   <FormFieldComponent
-                    name="command"
-                    label="Command"
-                    placeholder="Additional command"
-                    tooltip="Override the command of the container"
-                  />
-                  <FormFieldComponent
                     name="port"
                     label="Ports"
                     placeholder="8188:8188"
@@ -273,6 +264,12 @@ export function EnvironmentForm({
                     label="Host URL"
                     placeholder="http://localhost:8188"
                     tooltip="Override the host URL for connecting to the container"
+                  />
+                  <FormFieldComponent
+                    name="command"
+                    label="Command"
+                    placeholder="Optional command"
+                    tooltip="Override the command of the container"
                   />
                   <FormFieldComponent
                     name="entrypoint"

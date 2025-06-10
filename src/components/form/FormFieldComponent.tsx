@@ -18,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useFormContext } from "react-hook-form";
 import React from "react";
 import StyledSelectItem from "@/components/atoms/StyledSelectItem";
@@ -31,13 +32,14 @@ interface FormFieldComponentProps {
   name: string;
   label: string;
   placeholder: string;
-  type?: "text" | "select";
+  type?: "text" | "select" | "number" | "checkbox";
   children?: React.ReactNode;
-  onChange?: (value: string) => void;
+  onChange?: (value: string | number | boolean) => void;
   tooltip?: string;
   options?: SelectOption[];
-  defaultValue?: string;
+  defaultValue?: string | number | boolean;
   className?: string;
+  layout?: "grid" | "stack";
 }
 
 const FormFieldComponent = ({
@@ -51,6 +53,7 @@ const FormFieldComponent = ({
   options = [],
   defaultValue,
   className,
+  layout = "grid",
 }: FormFieldComponentProps) => {
   const { control } = useFormContext();
   return (
@@ -59,8 +62,8 @@ const FormFieldComponent = ({
       name={name}
       defaultValue={defaultValue}
       render={({ field }) => (
-        <FormItem className="grid grid-cols-4 items-center gap-4">
-          <FormLabel className="text-right">
+        <FormItem className={layout === "grid" ? "grid grid-cols-4 items-center gap-4" : ""}>
+          <FormLabel className={layout === "grid" ? "text-right" : ""}>
             {tooltip ? (
               <TooltipProvider>
                 <Tooltip>
@@ -76,15 +79,15 @@ const FormFieldComponent = ({
               label
             )}
           </FormLabel>
-          <FormControl className="col-span-3">
+          <FormControl className={layout === "grid" ? "col-span-3" : ""}>
             {children || (
               type === "select" ? (
                 <Select
+                  value={field.value}
                   onValueChange={(value) => {
                     field.onChange(value);
                     onChange?.(value);
                   }}
-                  defaultValue={defaultValue || field.value}
                 >
                   <SelectTrigger className={className}>
                     <SelectValue placeholder={placeholder} />
@@ -97,23 +100,32 @@ const FormFieldComponent = ({
                     ))}
                   </SelectContent>
                 </Select>
+              ) : type === "checkbox" ? (
+                <Checkbox
+                  checked={field.value}
+                  onCheckedChange={(checked: boolean) => {
+                    field.onChange(checked);
+                    onChange?.(checked);
+                  }}
+                  className={className}
+                />
               ) : (
                 <Input
                   {...field}
                   type={type}
                   placeholder={placeholder}
-                  defaultValue={defaultValue}
                   className={className}
                   onChange={(e) => {
-                    field.onChange(e);
-                    onChange?.(e.target.value);
+                    const value = type === "number" ? Number(e.target.value) : e.target.value;
+                    field.onChange(value);
+                    onChange?.(value);
                   }}
                   autoComplete="off"
                 />
               )
             )}
           </FormControl>
-          <FormMessage className="col-start-2 col-span-3" />
+          <FormMessage className={layout === "grid" ? "col-start-2 col-span-3" : ""} />
         </FormItem>
       )}
     />

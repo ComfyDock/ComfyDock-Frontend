@@ -3,7 +3,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { EnvironmentForm } from "@/components/form/EnvironmentForm";
 import { useToast } from "@/hooks/use-toast";
 import { Environment, EnvironmentInput, EnvironmentTypeEnum, EnvironmentTypeDescriptions } from "@/types/Environment";
-import { UserSettings } from "@/types/UserSettings";
 import { 
   useDuplicateFormDefaults,
   useEnvironmentDuplication
@@ -12,7 +11,6 @@ import React from "react";
 
 interface DuplicateEnvironmentDialogProps {
   environment: Environment;
-  userSettings?: UserSettings;
   selectedFolderRef: React.MutableRefObject<string | undefined>;
   duplicateEnvironmentHandler: (id: string, environment: EnvironmentInput) => Promise<void>;
   open: boolean;
@@ -21,14 +19,13 @@ interface DuplicateEnvironmentDialogProps {
 
 export default function DuplicateEnvironmentDialog({
   environment,
-  userSettings,
   selectedFolderRef,
   duplicateEnvironmentHandler,
   open,
   onOpenChange,
 }: DuplicateEnvironmentDialogProps) {
   const { toast } = useToast();
-  const formDefaults = useDuplicateFormDefaults(environment, userSettings);
+  const formDefaults = useDuplicateFormDefaults(environment);
   
   const {
     form,
@@ -39,9 +36,7 @@ export default function DuplicateEnvironmentDialog({
 
   useEffect(() => {
     if (open) {
-      console.log(`resetting form with defaults: ${JSON.stringify(formDefaults)}`)
       form.reset(formDefaults)
-      console.log(form.getValues())
     }
   }, [open, form, formDefaults]);
 

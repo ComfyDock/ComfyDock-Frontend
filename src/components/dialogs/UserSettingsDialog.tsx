@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -10,94 +9,56 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+import { Form } from "@/components/ui/form";
 import { Loader2 } from "lucide-react";
-import { getUserSettings, updateUserSettings } from "@/api/environmentApi";
-import { UserSettings, UserSettingsInput } from "@/types/UserSettings";
+import { getUserSettings } from "@/api/environmentApi";
+import { 
+  UserSettings, 
+  UserSettingsInput,
+  userSettingsSchema,
+  DEFAULT_USER_SETTINGS 
+} from "@/types/UserSettings";
+import FormFieldComponent from "@/components/form/FormFieldComponent";
 
 // TODO: Update only changed fields
 
-const formSchema = z.object({
-  comfyui_path: z.string().min(1, { message: "ComfyUI path is required" }),
-  port: z.number().int().min(1024).max(65535),
-  runtime: z.string().min(1, { message: "Runtime is required" }),
-  command: z.string().optional(),
-  max_deleted_environments: z.number().int().min(1).max(100),
-  folders: z.array(z.object({
-    id: z.string(),
-    name: z.string(),
-    icon: z.string().optional(),
-  })).optional(),
-});
-
 export interface UserSettingsDialogProps {
-  updateUserSettingsHandler: (settings: UserSettings) => Promise<void>;
+  userSettings?: UserSettings;
+  updateUserSettingsHandler: (userSettings: UserSettingsInput) => Promise<void>;
   children: React.ReactNode;
 }
 
 export default function UserSettingsDialog({
-  children,
+  userSettings,
   updateUserSettingsHandler,
+  children,
 }: UserSettingsDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      comfyui_path: "",
-      port: 8188,
-      runtime: "nvidia",
-      command: "",
-      folders: [],
-      max_deleted_environments: 10,
-    },
+  const form = useForm<UserSettings>({
+    resolver: zodResolver(userSettingsSchema),
+    defaultValues: DEFAULT_USER_SETTINGS,
+    mode: "onChange",
   });
 
   useEffect(() => {
-    const loadUserSettings = async () => {
-      try {
-        const settings = await getUserSettings();
-        console.log(`settings: ${JSON.stringify(settings)}`);
-        form.reset(settings);
-      } catch (error: unknown) {
-        console.error(error);
-        toast({
-          title: "Error",
-          description: "Failed to load user settings",
-          variant: "destructive",
-        });
-      }
-    };
-
     if (isOpen) {
-      loadUserSettings();
+      console.log(`userSettings: ${JSON.stringify(userSettings)}`);
+      if (userSettings) {
+        form.reset(userSettings);
+      } else {
+        form.reset(DEFAULT_USER_SETTINGS);
+      }
     }
-  }, [isOpen, form]);
+  }, [isOpen, form, userSettings]);
 
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    console.log(`onSubmit: ${JSON.stringify(values)}`);
+  const onSubmit = async (values: UserSettings) => {
     try {
       setIsLoading(true);
-      console.log(`values: ${JSON.stringify(values)}`);
-      await updateUserSettingsHandler(values as UserSettingsInput);
+      await updateUserSettingsHandler(values);
       setIsOpen(false);
       toast({
         title: "Success",
@@ -127,93 +88,78 @@ export default function UserSettingsDialog({
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
+            <FormFieldComponent
               name="comfyui_path"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Default ComfyUI Path</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+              label="Default ComfyUI Path"
+              placeholder="Default ComfyUI Path"
+              tooltip="The default path to the ComfyUI executable"
+              layout="stack"
             />
-            <FormField
-              control={form.control}
-              name="port"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Default Port</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      {...field}
-                      onChange={(e) =>
-                        field.onChange(parseInt(e.target.value, 10))
-                      }
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
+            <FormFieldComponent
               name="runtime"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Default Runtime</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a runtime" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="nvidia">Nvidia</SelectItem>
-                      <SelectItem value="none">None</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
+              label="Default Runtime"
+              placeholder="Select runtime"
+              type="select"
+              options={[
+                { value: "nvidia", label: "Nvidia" },
+                { value: "none", label: "None" }
+              ]}
+              defaultValue="nvidia"
+              tooltip="Select the runtime for the container"
+              layout="stack"
             />
-            <FormField
-              control={form.control}
+            <FormFieldComponent
+              name="port"
+              label="Ports"
+              placeholder="8188:8188"
+              type="text"
+              tooltip="Override the ports of the container. Format follows standard docker port mapping (e.g. host:container;host:container/protocol)"
+              layout="stack"
+            />
+            <FormFieldComponent
+              name="url"
+              label="Default URL"
+              placeholder="http://localhost:8188"
+              type="text"
+              tooltip="Override the URL of the container."
+              layout="stack"
+            />
+            <FormFieldComponent
               name="command"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Default Command (Optional)</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+              label="Default Command"
+              placeholder="Optional command"
+              tooltip="Override the command of the container"
+              layout="stack"
             />
-            <FormField
-              control={form.control}
+            <FormFieldComponent
+              name="entrypoint"
+              label="Default Entrypoint"
+              placeholder="/bin/bash"
+              tooltip="Override the entrypoint of the container"
+              layout="stack"
+            />
+            <FormFieldComponent
+              name="environment_variables"
+              label="Default Environment Variables"
+              placeholder="VAR1=1, VAR2=2, etc."
+              tooltip="Override the environment variables of the container"
+              layout="stack"
+            />
+            <FormFieldComponent
               name="max_deleted_environments"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Max Deleted Environments</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      {...field}
-                      onChange={(e) =>
-                        field.onChange(parseInt(e.target.value, 10))
-                      }
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+              label="Max Deleted Environments"
+              placeholder="10"
+              tooltip="The maximum number of environments to delete at once"
+              type="number"
+              layout="stack"
+            />
+            <FormFieldComponent
+              name="allow_multiple"
+              label="Allow Running Multiple Environments"
+              placeholder="false"
+              tooltip="Allow multiple environments to be active at once"
+              type="checkbox"
+              className=""
             />
             <div className="flex justify-end">
               <Button type="submit" disabled={isLoading}>

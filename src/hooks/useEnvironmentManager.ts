@@ -55,10 +55,10 @@ export function useEnvironmentManager() {
     }
   };
 
-  const activateEnvironmentHandler = async (id: string) => {
+  const activateEnvironmentHandler = async (id: string, allow_multiple: boolean = false) => {
     try {
       setActivatingEnvironment(id);
-      await activateEnvironment(id);
+      await activateEnvironment(id, allow_multiple);
       await updateEnvironments(selectedFolderRef.current);
     } catch (error: unknown) {
       toast({

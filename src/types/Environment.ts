@@ -167,6 +167,10 @@
 
 // Environment.ts
 import { z } from "zod";
+import { DEFAULT_USER_SETTINGS, UserSettings } from "@/types/UserSettings";
+import { getDefaultMountConfigsForEnvType, parseExistingMountConfig } from "@/components/utils/MountConfigUtils";
+
+const DEFAULT_COMFYUI_PATH = import.meta.env.VITE_DEFAULT_COMFYUI_PATH;
 
 /* ------------------------------------------------------------------ *
  *  ENUMS & CONSTANTS
@@ -212,9 +216,8 @@ const mountConfigSchema = z.object({ mounts: z.array(mountSchema) });
  *  SHARED OPTION FIELDS
  * ------------------------------------------------------------------ */
 export const DEFAULT_OPTIONS = {
-  port   : "8188",
-  runtime: "nvidia",
-  url    : "http://localhost:8188",
+  ...DEFAULT_USER_SETTINGS,
+  port   : String(DEFAULT_USER_SETTINGS.port),
 } as const;
 
 const optionsSchema = z.object({
@@ -292,3 +295,91 @@ export type Environment = EnvironmentInput & {
 
 // 4. PATCH / update payload
 export type EnvironmentUpdate = Partial<EnvironmentInput>;
+
+/* ------------------------------------------------------------------ *
+ *  FORM DEFAULTS GENERATOR
+ * ------------------------------------------------------------------ */
+export const createFormDefaults = (
+  options: {
+    userSettings?: UserSettings;
+    environment?: Environment;
+  } = {}
+): EnvironmentFormValues => {
+  const { userSettings, environment } = options;
+
+  // Helper to get default value with priority
+  const getDefaultValue = <T>(
+    field: keyof UserSettings,
+    defaultOptions: Record<string, T>,
+    defaultOptionsField?: string
+  ): T | undefined => {
+    // Try environment first if available
+    if (environment) {
+      // Check direct fields
+      if (field in environment) {
+        const value = environment[field as keyof Environment];
+        if (value !== undefined && value !== "") {
+          return value as T;
+        }
+      }
+      // Check in environment.options
+      if (environment.options?.[field as keyof typeof environment.options]) {
+        const value = environment.options[field as keyof typeof environment.options];
+        if (value !== undefined && value !== "") {
+          return value as T;
+        }
+      }
+    }
+
+    // Then try userSettings
+    if (userSettings && field in userSettings) {
+      const value = userSettings[field];
+      if (value !== undefined && value !== "") {
+        return value as T;
+      }
+    }
+    
+    // Then try DEFAULT_OPTIONS
+    const optionsField = defaultOptionsField || field;
+    if (optionsField in defaultOptions) {
+      return defaultOptions[optionsField];
+    }
+    
+    // Finally return undefined
+    return undefined;
+  };
+
+  // Get existing mounts if environment is provided
+  const existingMounts = environment 
+    ? parseExistingMountConfig(
+        environment.options?.["mount_config"],
+        environment.comfyui_path || "",
+      )
+    : undefined;
+
+  return {
+    // Core fields
+    name: environment ? `${environment.name}-copy` : "",
+    image: environment 
+      ? (environment.metadata?.["base_image"] as string) ?? environment.image ?? ""
+      : "",
+    comfyui_path: getDefaultValue("comfyui_path", DEFAULT_OPTIONS) as string || DEFAULT_COMFYUI_PATH || "",
+    environment_type: environment ? EnvironmentTypeEnum.Auto : EnvironmentTypeEnum.Default,
+    command: getDefaultValue("command", DEFAULT_OPTIONS) as string || "",
+    folderIds: [],
+
+    // Options fields
+    port: String(getDefaultValue("port", DEFAULT_OPTIONS) || DEFAULT_OPTIONS.port),
+    runtime: getDefaultValue("runtime", DEFAULT_OPTIONS) as string || "",
+    url: getDefaultValue("url", DEFAULT_OPTIONS) as string || 
+         "http://localhost:" + String(getDefaultValue("port", DEFAULT_OPTIONS) || DEFAULT_OPTIONS.port),
+    mount_config: {
+      mounts: existingMounts || getDefaultMountConfigsForEnvType(
+        EnvironmentTypeEnum.Default,
+        getDefaultValue("comfyui_path", DEFAULT_OPTIONS) as string || DEFAULT_COMFYUI_PATH || "",
+      ) as Mount[],
+    },
+    entrypoint: getDefaultValue("entrypoint", DEFAULT_OPTIONS) as string || "",
+    environment_variables: getDefaultValue("environment_variables", DEFAULT_OPTIONS) as string || "",
+  };
+};

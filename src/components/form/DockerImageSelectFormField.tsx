@@ -43,7 +43,6 @@ export function DockerImageSelectFormField({
       control={control}
       name={name}
       render={({ field }) => (
-        console.log(`field.value: ${field.value}`),
         <FormItem className={className}>
           <FormLabel className="text-right">{label}</FormLabel>
           <Select
