@@ -12,6 +12,7 @@ export function useUserSettingsManager() {
 
   useEffect(() => {
     getUserSettings().then((settings) => {
+      console.log(`settings: ${JSON.stringify(settings)}`);
       setUserSettings(settings);
       setFolders(settings.folders || DEFAULT_FOLDERS);
       // optional: if you want to default to the first custom folder
@@ -24,7 +25,7 @@ export function useUserSettingsManager() {
       const updatedSettings = {
         ...userSettings,
         ...settings
-      };
+      } as UserSettings;
       
       await updateUserSettings(updatedSettings);
       setUserSettings(updatedSettings);
@@ -104,7 +105,7 @@ export function useUserSettingsManager() {
   };
 
   return {
-    userSettings,
+    userSettings: userSettings as UserSettings,
     folders,
     selectedFolder,
     setSelectedFolder,

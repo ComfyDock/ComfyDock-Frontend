@@ -99,7 +99,10 @@ export function EnvironmentManagerComponent() {
             </Button>
           </CreateEnvironmentDialog>
 
-          <UserSettingsDialog updateUserSettingsHandler={updateUserSettingsHandler}>
+          <UserSettingsDialog 
+            userSettings={userSettings || undefined}
+            updateUserSettingsHandler={updateUserSettingsHandler}
+          >
             <Button className="bg-purple-600 hover:bg-purple-700">
               <Settings className="w-4 h-4 mr-2" />
               Settings
@@ -174,7 +177,7 @@ export function EnvironmentManagerComponent() {
           <EnvironmentCard
             key={env.id}
             environment={env}
-            environments={environments}
+            userSettings={userSettings}
             folders={folders}
             selectedFolderRef={selectedFolderRef}
             activatingEnvironment={activatingEnvironment}

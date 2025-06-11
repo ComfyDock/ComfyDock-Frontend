@@ -3,7 +3,6 @@ import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
-  SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -14,6 +13,7 @@ import { CONTAINER_COMFYUI_PATH } from "@/components/utils/MountConfigUtils";
 import { useFormContext, useWatch } from "react-hook-form";
 import { joinPaths } from "@/components/utils/PathUtils";
 import { useState, useEffect, useRef } from "react";
+import StyledSelectItem from "@/components/atoms/StyledSelectItem";
 
 interface MountConfigRowProps {
   index: number;
@@ -31,15 +31,15 @@ const MountConfigRow = ({
   const customWasSelected = useRef(false);
   const override = useWatch({
     control,
-    name: `mountConfig.${index}.override`,
+    name: `mount_config.mounts.${index}.override`,
   });
   const containerPath = useWatch({
     control,
-    name: `mountConfig.${index}.container_path`,
+    name: `mount_config.mounts.${index}.container_path`,
   });
   const comfyUIPath = useWatch({
     control,
-    name: "comfyUIPath",
+    name: "comfyui_path",
   });
 
   const handleContainerPathChange = (value: string) => {
@@ -49,17 +49,17 @@ const MountConfigRow = ({
       // Remember that custom was explicitly selected
       customWasSelected.current = true;
       // Clear the value to avoid saving "custom" as the actual path
-      setValue(`mountConfig.${index}.container_path`, "");
+      setValue(`mount_config.mounts.${index}.container_path`, "");
       onActionChange();
       return;
     }
 
-    setValue(`mountConfig.${index}.container_path`, value);
+    setValue(`mount_config.mounts.${index}.container_path`, value);
 
     if (!override) {
       const containerDir = value.split("/").pop() || "";
       const newHostPath = joinPaths(comfyUIPath, containerDir);
-      setValue(`mountConfig.${index}.host_path`, newHostPath);
+      setValue(`mount_config.mounts.${index}.host_path`, newHostPath);
     }
     onActionChange();
   };
@@ -86,7 +86,7 @@ const MountConfigRow = ({
       <div className="w-40">
         <FormField
           control={control}
-          name={`mountConfig.${index}.override`}
+          name={`mount_config.mounts.${index}.override`}
           render={({ field }) => (
             <FormItem>
               <FormControl>
@@ -97,7 +97,7 @@ const MountConfigRow = ({
                       field.onChange(checked);
                       // When disabling override, reset host path
                       if (!checked) {
-                        const containerPath = control._getWatch(`mountConfig.${index}.container_path`);
+                        const containerPath = control._getWatch(`mount_config.mounts.${index}.container_path`);
                         console.log(containerPath);
                         if (!containerPath) {
                           return;
@@ -106,7 +106,7 @@ const MountConfigRow = ({
                         console.log(containerDir);
                         const newHostPath = joinPaths(comfyUIPath, containerDir);
                         console.log(newHostPath);
-                        setValue(`mountConfig.${index}.host_path`, newHostPath);
+                        setValue(`mount_config.mounts.${index}.host_path`, newHostPath);
                       }
                       onActionChange();
                     }}
@@ -120,7 +120,7 @@ const MountConfigRow = ({
       <div className="w-full">
         <FormField
           control={control}
-          name={`mountConfig.${index}.host_path`}
+          name={`mount_config.mounts.${index}.host_path`}
           render={({ field }) => (
             <FormItem>
               <FormControl>
@@ -141,7 +141,7 @@ const MountConfigRow = ({
       <div className="min-w-[120px]">
         <FormField
           control={control}
-          name={`mountConfig.${index}.container_path`}
+          name={`mount_config.mounts.${index}.container_path`}
           render={({ field }) => (
             <FormItem>
               {isCustomPath ? (
@@ -157,7 +157,7 @@ const MountConfigRow = ({
                       if (!override) {
                         const containerDir = e.target.value.split('/').pop() || '';
                         const newHostPath = joinPaths(comfyUIPath, containerDir);
-                        setValue(`mountConfig.${index}.host_path`, newHostPath);
+                        setValue(`mount_config.mounts.${index}.host_path`, newHostPath);
                       }
                     }}
                   />
@@ -173,42 +173,24 @@ const MountConfigRow = ({
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem 
-                      value={`${CONTAINER_COMFYUI_PATH}/models`}
-                      className="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
-                    >
+                    <StyledSelectItem value={`${CONTAINER_COMFYUI_PATH}/models`}>
                       Models
-                    </SelectItem>
-                    <SelectItem 
-                      value={`${CONTAINER_COMFYUI_PATH}/output`}
-                      className="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
-                    >
+                    </StyledSelectItem>
+                    <StyledSelectItem value={`${CONTAINER_COMFYUI_PATH}/output`}>
                       Output
-                    </SelectItem>
-                    <SelectItem 
-                      value={`${CONTAINER_COMFYUI_PATH}/input`}
-                      className="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
-                    >
+                    </StyledSelectItem>
+                    <StyledSelectItem value={`${CONTAINER_COMFYUI_PATH}/input`}>
                       Input
-                    </SelectItem>
-                    <SelectItem 
-                      value={`${CONTAINER_COMFYUI_PATH}/user`}
-                      className="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
-                    >
+                    </StyledSelectItem>
+                    <StyledSelectItem value={`${CONTAINER_COMFYUI_PATH}/user`}>
                       User
-                    </SelectItem>
-                    <SelectItem 
-                      value={`${CONTAINER_COMFYUI_PATH}/custom_nodes`}
-                      className="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
-                    >
+                    </StyledSelectItem>
+                    <StyledSelectItem value={`${CONTAINER_COMFYUI_PATH}/custom_nodes`}>
                       Custom Nodes
-                    </SelectItem>
-                    <SelectItem 
-                      value="custom"
-                      className="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
-                    >
+                    </StyledSelectItem>
+                    <StyledSelectItem value="custom">
                       Custom...
-                    </SelectItem>
+                    </StyledSelectItem>
                   </SelectContent>
                 </Select>
               )}
@@ -219,7 +201,7 @@ const MountConfigRow = ({
       <div className="min-w-[85px]">
         <FormField
           control={control}
-          name={`mountConfig.${index}.type`}
+          name={`mount_config.mounts.${index}.type`}
           render={({ field }) => (
             <FormItem>
               <Select
@@ -235,8 +217,8 @@ const MountConfigRow = ({
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="mount">Mount</SelectItem>
-                  <SelectItem value="copy">Copy</SelectItem>
+                  <StyledSelectItem value="mount">Mount</StyledSelectItem>
+                  <StyledSelectItem value="copy">Copy</StyledSelectItem>
                 </SelectContent>
               </Select>
             </FormItem>

@@ -12,6 +12,10 @@ import {
   Tag,
   Network,
   HardDrive,
+  KeyRound,
+  Play,
+  Cpu,
+  Globe,
 } from "lucide-react";
 import { Environment, Mount, MountConfig } from "@/types/Environment";
 
@@ -98,15 +102,35 @@ export const EnvironmentInfoCard: React.FC<EnvironmentInfoCardProps> = ({
             value={environment.comfyui_path || "N/A"}
           />
           <InfoItem
+            icon={<Cpu className="h-4 w-4" />}
+            label="Runtime"
+            value={environment.options?.["runtime"] as string || "N/A"}
+          />
+          <InfoItem
             icon={<Terminal className="h-4 w-4" />}
             label="Command"
             value={environment.command || "N/A"}
           />
           <InfoItem
             icon={<Network className="h-4 w-4" />}
-            label="Port"
+            label="Ports"
             value={environment.options?.["port"] as string}
           />
+          <InfoItem
+            icon={<Globe className="h-4 w-4" />}
+            label="Host URL"
+            value={environment.options?.["url"] as string || "http://localhost:8188"}
+          />
+          <InfoItem
+            icon={<Play className="h-4 w-4" />}
+            label="Entrypoint"
+            value={environment.options?.["entrypoint"] as string || "N/A"}
+          />
+          <InfoItem
+            icon={<KeyRound className="h-4 w-4" />}
+            label="Environment Variables"
+            value={environment.options?.["environment_variables"] as string || "N/A"}
+          /> 
         </div>
         <div className="mt-4">
           <h4 className="text-sm font-medium mb-2 flex items-center">

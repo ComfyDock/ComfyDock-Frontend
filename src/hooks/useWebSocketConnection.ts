@@ -13,7 +13,7 @@ export function useWebSocketConnection({
 }: UseWebSocketProps) {
   const [connectionStatus, setConnectionStatus] = useState<"connected" | "disconnected">("disconnected");
   const wsRef = useRef<WebSocket | null>(null);
-  const reconnectIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const reconnectIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     console.log("useWebSocketConnection", url);

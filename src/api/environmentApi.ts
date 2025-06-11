@@ -32,8 +32,8 @@ export async function createEnvironment(environment: EnvironmentInput) {
   return response.json();
 }
 
-export async function activateEnvironment(id: string) {
-  const response = await fetch(`${API_BASE_URL}/environments/${id}/activate`, {
+export async function activateEnvironment(id: string, allow_multiple: boolean = false) {
+  const response = await fetch(`${API_BASE_URL}/environments/${id}/activate?allow_multiple=${allow_multiple}`, {
     method: 'POST',
   });
   if (!response.ok) {

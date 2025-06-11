@@ -38,6 +38,7 @@ import {
 import { useEffect } from "react";
 import { getDefaultMountConfigsForEnvType } from "@/components/utils/MountConfigUtils";
 import { joinPaths } from "@/components/utils/PathUtils";
+import StyledSelectItem from "@/components/atoms/StyledSelectItem";
 
 interface EnvironmentFormProps {
   form: UseFormReturn<EnvironmentFormValues>;
@@ -60,33 +61,31 @@ export function EnvironmentForm({
   submitButtonText = "Create",
   children,
 }: EnvironmentFormProps) {
-  // Form Fields
-  const { fields, append, remove } = useFieldArray({
+  // Mount Config Form Fields
+  const { fields: mountFields, append, remove } = useFieldArray({
     control: form.control,
-    name: "mountConfig",
+    name: "mount_config.mounts",
   });
 
   const handleMountConfigChange = () => {
     console.log("handleMountConfigChange");
-    form.setValue("environmentType", EnvironmentTypeEnum.Custom);
+    form.setValue("environment_type", EnvironmentTypeEnum.Custom);
   };
 
   const comfyUIPath = useWatch({
     control: form.control,
-    name: "comfyUIPath",
+    name: "comfyui_path",
   });
 
   // Effects
   useEffect(() => {
     console.log("useEffect in EnvironmentForm");
     const debounceTimer = setTimeout(() => {
-      const currentEnvType = form.getValues("environmentType");
+      const currentEnvType = form.getValues("environment_type");
 
       if (currentEnvType === EnvironmentTypeEnum.Custom) {
         // For custom environments, update non-overridden paths
-        const updatedMountConfig = form
-          .getValues("mountConfig")
-          .map((config: Mount) => {
+        const updatedMountConfig = form?.getValues("mount_config.mounts")?.map((config: Mount) => {
             if (!config.override) {
               const containerDir = config.container_path.split("/").pop() || "";
               return {
@@ -99,7 +98,7 @@ export function EnvironmentForm({
         console.log(
           `updatedMountConfig: ${JSON.stringify(updatedMountConfig)}`
         );
-        form.setValue("mountConfig", updatedMountConfig);
+        form.setValue("mount_config.mounts", updatedMountConfig || []);
       } else {
         // For preset environment types, regenerate the default config
         const newMountConfig = getDefaultMountConfigsForEnvType(
@@ -107,8 +106,7 @@ export function EnvironmentForm({
           comfyUIPath
         );
         if (newMountConfig) {
-          form.setValue("mountConfig", newMountConfig as Mount[]);
-          console.log(`newMountConfig: ${JSON.stringify(newMountConfig)}`);
+          form.setValue("mount_config.mounts", newMountConfig as Mount[]);
         }
       }
     }, 300); // 300ms debounce
@@ -136,7 +134,7 @@ export function EnvironmentForm({
           {children}
 
           <FormFieldComponent
-            name="comfyUIPath"
+            name="comfyui_path"
             label="Path to ComfyUI"
             placeholder="/path/to/ComfyUI"
           />
@@ -144,7 +142,7 @@ export function EnvironmentForm({
           {/* Environment Type Selector */}
           <FormField
             control={form.control}
-            name="environmentType"
+            name="environment_type"
             render={({ field }) => (
               <FormItem className="grid grid-cols-4 items-center gap-4">
                 <FormLabel className="text-right">Environment Type</FormLabel>
@@ -160,7 +158,7 @@ export function EnvironmentForm({
                   <SelectContent>
                     {Object.entries(environmentTypeOptions).map(
                       ([value, label]) => (
-                        <SelectItem key={value} value={label}>
+                        <StyledSelectItem key={value} value={label}>
                           <div className="flex flex-col">
                             <span className="font-medium">{label}</span>
                             <span className="text-xs text-muted-foreground">
@@ -171,7 +169,7 @@ export function EnvironmentForm({
                               }
                             </span>
                           </div>
-                        </SelectItem>
+                        </StyledSelectItem>
                       )
                     )}
                   </SelectContent>
@@ -200,7 +198,7 @@ export function EnvironmentForm({
                         <div className="w-full">Action</div>
                       </div>
                       <div className="max-h-[300px] overflow-y-auto pr-2">
-                        {fields.map((field, index) => (
+                        {mountFields.map((field, index) => (
                           <MountConfigRow
                             key={field.id}
                             index={index}
@@ -242,54 +240,51 @@ export function EnvironmentForm({
               </AccordionTrigger>
               <AccordionContent>
                 <div className="space-y-4 px-4">
-                  <FormField
-                    control={form.control}
+                  <FormFieldComponent
                     name="runtime"
-                    render={({ field }) => (
-                      <FormItem className="grid grid-cols-4 items-center gap-4">
-                        <FormLabel className="text-right">Runtime</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                        >
-                          <FormControl className="col-span-3">
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select runtime" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="nvidia">Nvidia</SelectItem>
-                            <SelectItem value="none">None</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage className="col-start-2 col-span-3" />
-                      </FormItem>
-                    )}
+                    label="Runtime"
+                    placeholder="Select runtime"
+                    type="select"
+                    options={[
+                      { value: "nvidia", label: "Nvidia" },
+                      { value: "none", label: "None" }
+                    ]}
+                    defaultValue="nvidia"
+                    tooltip="Select the runtime for the container"
+                    className="col-span-3"
+                  />
+                  <FormFieldComponent
+                    name="port"
+                    label="Ports"
+                    placeholder="8188:8188"
+                    tooltip="Override the ports of the container. Format follows standard docker port mapping (e.g. host:container;host:container/protocol)"
+                  />
+                  <FormFieldComponent
+                    name="url"
+                    label="Host URL"
+                    placeholder="http://localhost:8188"
+                    tooltip="Override the host URL for connecting to the container"
                   />
                   <FormFieldComponent
                     name="command"
                     label="Command"
-                    placeholder="Additional command"
+                    placeholder="Optional command"
+                    tooltip="Override the command of the container"
                   />
-                  <FormFieldComponent
-                    name="port"
-                    label="Port"
-                    placeholder="Port number"
-                    type="number"
-                  />
-                  {/* <FormFieldComponent
-                    name="environmentVariables"
-                    label="Environment Variables"
-                    placeholder="VAR1=1, VAR2=2, etc."
-                    type="text"
-                  />
-
                   <FormFieldComponent
                     name="entrypoint"
                     label="Override Entrypoint"
-                    placeholder="uv run python main.py --listen 0.0.0.0"
+                    placeholder="/bin/bash"
                     type="text"
-                  /> */}
+                    tooltip="Override the entrypoint of the container"
+                  />
+                  <FormFieldComponent
+                    name="environment_variables"
+                    label="Environment Variables"
+                    placeholder="VAR1=1, VAR2=2, etc."
+                    type="text"
+                    tooltip="Override the environment variables of the container"
+                  />
                 </div>
               </AccordionContent>
             </AccordionItem>

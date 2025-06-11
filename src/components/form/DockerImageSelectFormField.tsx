@@ -46,8 +46,7 @@ export function DockerImageSelectFormField({
         <FormItem className={className}>
           <FormLabel className="text-right">{label}</FormLabel>
           <Select
-            defaultValue={field.value}
-            onValueChange={field.onChange}
+            value={field.value || placeholder}
             open={false}
             onOpenChange={(open) => {
               if (open) {
@@ -57,19 +56,11 @@ export function DockerImageSelectFormField({
           >
             <FormControl className="col-span-3">
               <SelectTrigger>
-                <SelectValue defaultValue={field.value}>
+                <SelectValue>
                   {field.value || placeholder}
                 </SelectValue>
               </SelectTrigger>
             </FormControl>
-
-            {/* We don't actually need items, but you can 
-                provide a single fallback item if you'd like */}
-            <SelectContent>
-              <SelectItem value={field.value || "placeholder"}>
-                {field.value || "placeholder"}
-              </SelectItem>
-            </SelectContent>
           </Select>
           <FormMessage className="col-start-2 col-span-3" />
         </FormItem>
