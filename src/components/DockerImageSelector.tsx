@@ -394,25 +394,25 @@ export function DockerImageSelector({
               {/* Header row */}
               <div className="grid grid-cols-[3fr_1fr_1fr_1fr] gap-2 border-b pb-2 mb-2 font-semibold px-6">
                 <div 
-                  className="flex items-center gap-1 cursor-pointer hover:bg-gray-100 p-1 rounded"
+                  className="flex items-center gap-1 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 p-1 rounded"
                   onClick={() => handleSort('tag')}
                 >
                   Tag {getSortIcon('tag')}
                 </div>
                 <div 
-                  className="flex items-center gap-1 cursor-pointer hover:bg-gray-100 p-1 rounded"
+                  className="flex items-center gap-1 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 p-1 rounded"
                   onClick={() => handleSort('status')}
                 >
                   Status {getSortIcon('status')}
                 </div>
                 <div 
-                  className="flex items-center gap-1 cursor-pointer hover:bg-gray-100 p-1 rounded"
+                  className="flex items-center gap-1 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 p-1 rounded"
                   onClick={() => handleSort('size')}
                 >
                   Size {getSortIcon('size')}
                 </div>
                 <div 
-                  className="flex items-center gap-1 cursor-pointer hover:bg-gray-100 p-1 rounded"
+                  className="flex items-center gap-1 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 p-1 rounded"
                   onClick={() => handleSort('updated')}
                 >
                   Updated {getSortIcon('updated')}
@@ -428,7 +428,7 @@ export function DockerImageSelector({
                     {filteredImages.map((img) => (
                       <div
                         key={img.tag}
-                        className="grid grid-cols-[3fr_1fr_1fr_1fr] gap-2 p-2 items-center hover:bg-gray-100 rounded-md cursor-pointer"
+                        className="grid grid-cols-[3fr_1fr_1fr_1fr] gap-2 p-2 items-center hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md cursor-pointer"
                         onClick={() =>
                           handleSelectImage(img.fullImageName)
                         }
@@ -474,19 +474,19 @@ export function DockerImageSelector({
               {/* Header row */}
               <div className="grid grid-cols-[3fr_1fr_1fr] gap-2 border-b pb-2 mb-2 font-semibold px-6">
                 <div 
-                  className="flex items-center gap-1 cursor-pointer hover:bg-gray-100 p-1 rounded"
+                  className="flex items-center gap-1 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 p-1 rounded"
                   onClick={() => handleInstalledSort('tag')}
                 >
                   Tag {getInstalledSortIcon('tag')}
                 </div>
                 <div 
-                  className="flex items-center gap-1 cursor-pointer hover:bg-gray-100 p-1 rounded"
+                  className="flex items-center gap-1 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 p-1 rounded"
                   onClick={() => handleInstalledSort('size')}
                 >
                   Size {getInstalledSortIcon('size')}
                 </div>
                 <div 
-                  className="flex items-center gap-1 cursor-pointer hover:bg-gray-100 p-1 rounded"
+                  className="flex items-center gap-1 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 p-1 rounded"
                   onClick={() => handleInstalledSort('created')}
                 >
                   Created {getInstalledSortIcon('created')}
@@ -502,7 +502,7 @@ export function DockerImageSelector({
                     {sortedInstalledImages.map((img) => (
                       <div
                         key={img.id + img.tag}
-                        className="grid grid-cols-[3fr_1fr_1fr] gap-2 p-2 hover:bg-gray-100 rounded-md cursor-pointer"
+                        className="grid grid-cols-[3fr_1fr_1fr] gap-2 p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md cursor-pointer"
                         onClick={() => handleSelectImage(img.tag)}
                       >
                         {/* First (largest) column: Tag */}

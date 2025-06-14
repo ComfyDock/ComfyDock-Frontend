@@ -7,7 +7,7 @@
   line-height: 1.5;
   font-weight: 400;
 
-  /* color-scheme: light dark; */
+  color-scheme: light dark;
   color: #213547;
   background-color: #ffffff;
 
@@ -15,6 +15,15 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Dark mode root styles */
+.dark {
+  color-scheme: dark;
+}
+
+body {
+  @apply bg-white dark:bg-zinc-950 text-zinc-950 dark:text-zinc-50 transition-colors;
 }
 
 .dialog-content::-webkit-scrollbar {
@@ -26,12 +35,20 @@
 }
 
 .dialog-content::-webkit-scrollbar-thumb {
-  background-color: rgba(0, 0, 0, 0.5); /* Adjust the color and opacity */
+  background-color: rgba(0, 0, 0, 0.3); /* Adjust the color and opacity */
   border-radius: 10px; /* Make the thumb rounded */
+}
+
+.dark .dialog-content::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.3); /* Light scrollbar for dark mode */
 }
 
 .dialog-content::-webkit-scrollbar-thumb:hover {
   background-color: rgba(0, 0, 0, 0.7); /* Darker on hover */
+}
+
+.dark .dialog-content::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.5); /* Lighter on hover in dark mode */
 }
 
 /* montserrat-latin-wght-normal */

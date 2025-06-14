@@ -14,6 +14,7 @@ import CreateEnvironmentDialog from "./dialogs/CreateEnvironmentDialog";
 import UserSettingsDialog from "./dialogs/UserSettingsDialog";
 import { FolderSelector } from "./FolderSelector";
 import EnvironmentCard from "./EnvironmentCard";
+import { ThemeToggle } from "./ThemeToggle";
 
 export function EnvironmentManagerComponent() {
   const { environments,
@@ -145,6 +146,8 @@ export function EnvironmentManagerComponent() {
               alt="Buy Me a Coffee at ko-fi.com"
             />
           </a>
+
+          <ThemeToggle />
         </div>
       </div>
 

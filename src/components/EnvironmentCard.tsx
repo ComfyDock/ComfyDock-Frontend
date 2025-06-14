@@ -85,11 +85,11 @@ export default function EnvironmentCard({
   return (
     <Card
       key={environment.id}
-      className={`relative flex flex-col h-full ${isRunning ? "ring-2 ring-slate-500" : ""}`}
+      className={`relative flex flex-col h-full ${isRunning ? "ring-2 ring-slate-500 dark:ring-slate-400" : ""}`}
     >
       <div className="relative flex flex-col flex-1">
         {isDeleting && (
-          <div className="absolute top-0 left-0 w-full h-full bg-zinc-200/50 backdrop-blur-sm flex items-center justify-center z-10">
+          <div className="absolute top-0 left-0 w-full h-full bg-zinc-200/50 dark:bg-zinc-800/50 backdrop-blur-sm flex items-center justify-center z-10">
             <Loader2 className="w-6 h-6 text-zinc-900 dark:text-zinc-50 animate-spin mr-2" />
             Deleting...
           </div>
