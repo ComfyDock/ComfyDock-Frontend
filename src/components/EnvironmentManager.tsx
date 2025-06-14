@@ -4,6 +4,7 @@ import { ExternalLink, Settings } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Toaster } from "@/components/ui/toaster";
 import { WS_CONFIG } from "@/config";
+import packageJson from "../../package.json";
 
 import { useEnvironmentManager } from "@/hooks/useEnvironmentManager";
 import { useUserSettingsManager } from "@/hooks/useUserSettings";
@@ -203,6 +204,13 @@ export function EnvironmentManagerComponent() {
           >
             Akatz
           </a>
+        </p>
+      </div>
+
+      {/* Version */}
+      <div className="absolute bottom-4 right-4 flex flex-col items-center justify-center">
+        <p className="text-center text-sm text-zinc-600 dark:text-zinc-400">
+          v{packageJson.version}
         </p>
       </div>
       <Toaster />
