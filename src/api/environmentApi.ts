@@ -100,6 +100,23 @@ export async function updateEnvironment(id: string, environment: EnvironmentUpda
   return response.json();
 }
 
+export async function commitEnvironment(id: string, repo_name: string, tag_name: string) {
+  const params = new URLSearchParams({
+    repo_name,
+    tag_name
+  });
+  
+  const response = await fetch(`${API_BASE_URL}/environments/${id}/commit?${params}`, {
+    method: 'POST',
+  });
+  if (!response.ok) {
+    const errorDetails = await response.json()
+    console.error(`${response.status} - Failed to commit environment: ${errorDetails.detail}`)
+    throw new Error(`${errorDetails.detail}`);
+  }
+  return response.json();
+}
+
 export function connectToLogStream(environmentId: string, onLogReceived: (log: string) => void) {
   const eventSource = new EventSource(`${API_BASE_URL}/environments/${environmentId}/logs`);
 

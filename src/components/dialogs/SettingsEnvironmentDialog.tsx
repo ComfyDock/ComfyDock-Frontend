@@ -26,6 +26,7 @@ import {
 import { Folder as FolderType } from "@/types/UserSettings";
 import { FolderSelector } from "../FolderSelector";
 import { EnvironmentInfoCard } from "../EnvironmentInfoCard";
+import ExportImageDialog from "./ExportImageDialog";
 
 const SUCCESS_TOAST_DURATION = 2000;
 
@@ -67,6 +68,7 @@ export default function SettingsEnvironmentDialog({
   onOpenChange,
 }: SettingsEnvironmentDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const [exportImageDialogOpen, setExportImageDialogOpen] = useState(false);
   const [selectedFolder, setSelectedFolder] = useState<FolderType | null>(
     getEnvironmentFolder(environment, folders)
   );
@@ -168,7 +170,15 @@ export default function SettingsEnvironmentDialog({
                 </FormItem>
               )}
             />
-            <div className="flex justify-end">
+            <div className="flex justify-between">
+              <Button 
+                type="button" 
+                variant="outline"
+                onClick={() => setExportImageDialogOpen(true)}
+                disabled={isLoading}
+              >
+                Export Image
+              </Button>
               <Button type="submit" disabled={isLoading}>
                 {isLoading ? (
                   <>
@@ -183,6 +193,11 @@ export default function SettingsEnvironmentDialog({
             <EnvironmentInfoCard environment={environment} />
           </form>
         </Form>
+        <ExportImageDialog
+          environment={environment}
+          open={exportImageDialogOpen}
+          onOpenChange={setExportImageDialogOpen}
+        />
       </DialogContent>
     </Dialog>
   );

@@ -15,7 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Loader2 } from "lucide-react";
+import { Loader2, ChevronUp, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useComfyUIReleases } from "@/hooks/use-comfyui-releases";
 import { Badge } from "@/components/ui/badge";
@@ -30,6 +30,21 @@ interface DockerImage {
   size: number;
   lastUpdated: string;
   digest: string;
+}
+
+type SortField = 'tag' | 'status' | 'size' | 'updated';
+type SortDirection = 'asc' | 'desc';
+
+interface SortState {
+  field: SortField;
+  direction: SortDirection;
+}
+
+type InstalledSortField = 'tag' | 'size' | 'created';
+
+interface InstalledSortState {
+  field: InstalledSortField;
+  direction: SortDirection;
 }
 
 interface DockerImageSelectorProps {
@@ -119,6 +134,11 @@ export function DockerImageSelector({
   const [selectedCuda, setSelectedCuda] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [customImage, setCustomImage] = useState<string>("");
+  
+  // Sorting states
+  const [sortState, setSortState] = useState<SortState>({ field: 'updated', direction: 'desc' });
+  const [installedSortState, setInstalledSortState] = useState<InstalledSortState>({ field: 'created', direction: 'desc' });
+  
   const loading = parsedImages.length === 0;
 
   // Create a Set of installed image digests for O(1) lookup
@@ -137,9 +157,34 @@ export function DockerImageSelector({
     return digest && installedDigests.has(digest);
   }, [installedDigests]);
 
-  // Filter logic
+  // Sorting functions
+  const handleSort = (field: SortField) => {
+    setSortState(prev => ({
+      field,
+      direction: prev.field === field && prev.direction === 'asc' ? 'desc' : 'asc'
+    }));
+  };
+
+  const handleInstalledSort = (field: InstalledSortField) => {
+    setInstalledSortState(prev => ({
+      field,
+      direction: prev.field === field && prev.direction === 'asc' ? 'desc' : 'asc'
+    }));
+  };
+
+  const getSortIcon = (field: SortField) => {
+    if (sortState.field !== field) return null;
+    return sortState.direction === 'asc' ? <ChevronUp className="h-5 w-5 text-blue-500" /> : <ChevronDown className="h-5 w-5 text-blue-500" />;
+  };
+
+  const getInstalledSortIcon = (field: InstalledSortField) => {
+    if (installedSortState.field !== field) return null;
+    return installedSortState.direction === 'asc' ? <ChevronUp className="h-5 w-5 text-blue-500" /> : <ChevronDown className="h-5 w-5 text-blue-500" />;
+  };
+
+  // Filter and sort logic
   const filteredImages = useMemo(() => {
-    return parsedImages.filter((img) => {
+    const filtered = parsedImages.filter((img) => {
       const comfyMatch =
         selectedComfyUI === "all" || img.comfyUIVersion === selectedComfyUI;
       const pythonMatch =
@@ -149,7 +194,9 @@ export function DockerImageSelector({
       const searchMatch =
         !searchTerm || img.tag.toLowerCase().includes(searchTerm.toLowerCase());
       return comfyMatch && pythonMatch && cudaMatch && searchMatch;
-    }).sort((a, b) => {
+    });
+
+    return filtered.sort((a, b) => {
       // First prioritize installed images
       const aInstalled = isImageInstalled(a.digest);
       const bInstalled = isImageInstalled(b.digest);
@@ -158,34 +205,81 @@ export function DockerImageSelector({
         return aInstalled ? -1 : 1; // Installed images come first
       }
       
-      // Then follow the existing sort order
-      // By comfyUIVersion (descending)
-      if (a.comfyUIVersion !== b.comfyUIVersion) {
-        return b.comfyUIVersion.localeCompare(a.comfyUIVersion, undefined, { numeric: true });
+      // Then sort based on selected sort field
+      let compareResult = 0;
+      
+      switch (sortState.field) {
+        case 'tag':
+          compareResult = a.fullImageName.localeCompare(b.fullImageName);
+          break;
+        case 'status':
+          // Installed vs not installed (already handled above)
+          compareResult = 0;
+          break;
+        case 'size':
+          compareResult = a.size - b.size;
+          break;
+        case 'updated':
+          compareResult = new Date(a.lastUpdated).getTime() - new Date(b.lastUpdated).getTime();
+          break;
+        default:
+          compareResult = 0;
       }
       
-      // Then by pythonVersion (descending)
-      if (a.pythonVersion !== b.pythonVersion) {
-        return b.pythonVersion.localeCompare(a.pythonVersion, undefined, { numeric: true });
+      // Apply sort direction
+      const result = sortState.direction === 'asc' ? compareResult : -compareResult;
+      
+      // If the primary sort is equal, fall back to the original complex sorting for installed images
+      if (result === 0 && (aInstalled && bInstalled)) {
+        // Original complex sorting logic for installed images
+        if (a.comfyUIVersion !== b.comfyUIVersion) {
+          return b.comfyUIVersion.localeCompare(a.comfyUIVersion, undefined, { numeric: true });
+        }
+        
+        if (a.pythonVersion !== b.pythonVersion) {
+          return b.pythonVersion.localeCompare(a.pythonVersion, undefined, { numeric: true });
+        }
+        
+        if (a.cudaVersion !== b.cudaVersion) {
+          return b.cudaVersion.localeCompare(a.cudaVersion, undefined, { numeric: true });
+        }
+        
+        const aIsNightly = a.pytorchVersion?.includes("nightly") || false;
+        const bIsNightly = b.pytorchVersion?.includes("nightly") || false;
+        
+        if (aIsNightly !== bIsNightly) {
+          return aIsNightly ? 1 : -1;
+        }
+        
+        return (b.pytorchVersion || "").localeCompare(a.pytorchVersion || "", undefined, { numeric: true });
       }
       
-      // Then by cudaVersion (descending)
-      if (a.cudaVersion !== b.cudaVersion) {
-        return b.cudaVersion.localeCompare(a.cudaVersion, undefined, { numeric: true });
-      }
-      
-      // Then prioritize stable pytorch over nightly
-      const aIsNightly = a.pytorchVersion?.includes("nightly") || false;
-      const bIsNightly = b.pytorchVersion?.includes("nightly") || false;
-      
-      if (aIsNightly !== bIsNightly) {
-        return aIsNightly ? 1 : -1; // Stable comes first
-      }
-      
-      // Finally by pytorchVersion (descending)
-      return (b.pytorchVersion || "").localeCompare(a.pytorchVersion || "", undefined, { numeric: true });
+      return result;
     });
-  }, [parsedImages, selectedComfyUI, selectedPython, selectedCuda, searchTerm, isImageInstalled]);
+  }, [parsedImages, selectedComfyUI, selectedPython, selectedCuda, searchTerm, isImageInstalled, sortState]);
+
+  // Sorted installed images
+  const sortedInstalledImages = useMemo(() => {
+    return [...installedImages].sort((a, b) => {
+      let compareResult = 0;
+      
+      switch (installedSortState.field) {
+        case 'tag':
+          compareResult = a.tag.localeCompare(b.tag);
+          break;
+        case 'size':
+          compareResult = a.size - b.size;
+          break;
+        case 'created':
+          compareResult = new Date(a.created).getTime() - new Date(b.created).getTime();
+          break;
+        default:
+          compareResult = 0;
+      }
+      
+      return installedSortState.direction === 'asc' ? compareResult : -compareResult;
+    });
+  }, [installedImages, installedSortState]);
 
   const handleSelectImage = (image: string) => {
     console.log("handleSelectImage", image);
@@ -299,10 +393,30 @@ export function DockerImageSelector({
             <div className="flex-1 overflow-hidden px-4 pb-[45px]">
               {/* Header row */}
               <div className="grid grid-cols-[3fr_1fr_1fr_1fr] gap-2 border-b pb-2 mb-2 font-semibold px-6">
-                <div>Tag</div>
-                <div>Status</div>
-                <div>Size</div>
-                <div>Updated</div>
+                <div 
+                  className="flex items-center gap-1 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 p-1 rounded"
+                  onClick={() => handleSort('tag')}
+                >
+                  Tag {getSortIcon('tag')}
+                </div>
+                <div 
+                  className="flex items-center gap-1 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 p-1 rounded"
+                  onClick={() => handleSort('status')}
+                >
+                  Status {getSortIcon('status')}
+                </div>
+                <div 
+                  className="flex items-center gap-1 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 p-1 rounded"
+                  onClick={() => handleSort('size')}
+                >
+                  Size {getSortIcon('size')}
+                </div>
+                <div 
+                  className="flex items-center gap-1 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 p-1 rounded"
+                  onClick={() => handleSort('updated')}
+                >
+                  Updated {getSortIcon('updated')}
+                </div>
               </div>
               <ScrollArea className="h-full w-full rounded-md border">
                 {isLoadingComfyUIReleases ? (
@@ -314,7 +428,7 @@ export function DockerImageSelector({
                     {filteredImages.map((img) => (
                       <div
                         key={img.tag}
-                        className="grid grid-cols-[3fr_1fr_1fr_1fr] gap-2 p-2 items-center hover:bg-gray-100 rounded-md cursor-pointer"
+                        className="grid grid-cols-[3fr_1fr_1fr_1fr] gap-2 p-2 items-center hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md cursor-pointer"
                         onClick={() =>
                           handleSelectImage(img.fullImageName)
                         }
@@ -359,9 +473,24 @@ export function DockerImageSelector({
             <div className="flex-1 overflow-hidden px-4 pb-[45px]">
               {/* Header row */}
               <div className="grid grid-cols-[3fr_1fr_1fr] gap-2 border-b pb-2 mb-2 font-semibold px-6">
-                <div>Tag</div>
-                <div>Size</div>
-                <div>Date Created</div>
+                <div 
+                  className="flex items-center gap-1 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 p-1 rounded"
+                  onClick={() => handleInstalledSort('tag')}
+                >
+                  Tag {getInstalledSortIcon('tag')}
+                </div>
+                <div 
+                  className="flex items-center gap-1 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 p-1 rounded"
+                  onClick={() => handleInstalledSort('size')}
+                >
+                  Size {getInstalledSortIcon('size')}
+                </div>
+                <div 
+                  className="flex items-center gap-1 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 p-1 rounded"
+                  onClick={() => handleInstalledSort('created')}
+                >
+                  Created {getInstalledSortIcon('created')}
+                </div>
               </div>
               <ScrollArea className="h-full w-full rounded-md border">
                 {loading ? (
@@ -370,10 +499,10 @@ export function DockerImageSelector({
                   </div>
                 ) : (
                   <div className="p-4">
-                    {installedImages.map((img) => (
+                    {sortedInstalledImages.map((img) => (
                       <div
                         key={img.id + img.tag}
-                        className="grid grid-cols-[3fr_1fr_1fr] gap-2 p-2 hover:bg-gray-100 rounded-md cursor-pointer"
+                        className="grid grid-cols-[3fr_1fr_1fr] gap-2 p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md cursor-pointer"
                         onClick={() => handleSelectImage(img.tag)}
                       >
                         {/* First (largest) column: Tag */}
