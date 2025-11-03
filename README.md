@@ -1,3 +1,7 @@
+# Update
+
+***This repo is now ARCHIVED and will not see further development. To access the new version of ComfyDock (v1.0+) please visit the [monorepo]().***
+
 # React + TypeScript + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
